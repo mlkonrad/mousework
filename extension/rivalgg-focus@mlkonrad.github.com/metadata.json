@@ -1,6 +1,0 @@
-{
-    "uuid": "rivalgg-focus@mlkonrad.github.com",
-    "name": "rivalgg Focus Reporter",
-    "description": "Tells rivalgg which app is focused, so it can switch SteelSeries Rival 3 Wireless profiles automatically.\n\nPublishes the focused app's ID on the session bus as io.github.rivalgg.Focus. It has no user interface.",
-    "shell-version": ["50"]
-}

@@ -25,12 +25,14 @@ references such as `§3.1` in the code point into that spec.
 | Follows CPI changes made with the on-mouse button | live events |
 | Acceleration, deceleration and smoothing (0–10 each) | host, via `rivalgg-filter` |
 | Low-battery notifications at 15 % and 5 % (can be turned off) | host, via `rivalgg-filter` |
-| Per-app profiles: switch automatically when an app is focused | host, via `rivalgg-filter` + Shell extension |
 
 Not implemented:
 
 - Firmware updates (§6.3; deliberately left out because a failed flash can brick the mouse).
 - Macros (§3.6).
+- Automatic per-application profile switching (§7.4). GNOME on Wayland
+  doesn't tell apps which window is focused; anything that does (a Shell
+  extension, a compositor script) can call `rivalgg profile use NAME`.
 
 ## Install
 
@@ -64,28 +66,6 @@ rivalgg battery-warnings off                 # or on
 On first run, rivalgg imports what the mouse can report (CPI, polling, power
 settings). Button mappings and lighting have no read-back, so they stay as
 they are on the mouse until you change them.
-
-## Per-app profiles
-
-`rivalgg-filter` switches to an app's profile when that app has been focused
-for 1.5 s, and back to the active profile for every other app (including the
-rivalgg window itself). Only settings that differ are written, and nothing is
-saved to the mouse's flash, so switching often doesn't wear it out; after a
-power cycle the mouse comes back with the active profile.
-
-GNOME on Wayland doesn't tell apps which window is focused, so a tiny Shell
-extension (`extension/rivalgg-focus@mlkonrad.github.com`) publishes the
-focused app ID on the session bus as `io.github.rivalgg.Focus`. Any app in
-your session can read that while the extension runs.
-
-```sh
-ln -s "$PWD/extension/rivalgg-focus@mlkonrad.github.com" ~/.local/share/gnome-shell/extensions/
-gnome-extensions enable rivalgg-focus@mlkonrad.github.com   # log out and in first on Wayland
-rivalgg app-profile focused                  # the focused app's ID
-rivalgg app-profile set steam Gaming
-rivalgg app-profile list
-rivalgg app-profile remove steam
-```
 
 ## Motion filter
 

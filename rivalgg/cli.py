@@ -203,43 +203,6 @@ def cmd_profile(args):
         store.save()
 
 
-def _app_id(text):
-    return text if text.endswith(".desktop") else text + ".desktop"
-
-
-def cmd_app_profile(args):
-    from . import autoswitch
-    store = Store()
-    action = args.app_action
-    if action == "list":
-        if not store.app_profiles:
-            print("no app rules")
-        for app, name in sorted(store.app_profiles.items()):
-            print(f"{app}  ->  {name}")
-        if not autoswitch.focus_extension_running():
-            print("note: the rivalgg-focus GNOME Shell extension isn't running, "
-                  "so rules have no effect", file=sys.stderr)
-    elif action == "set":
-        if args.profile not in store.profiles:
-            raise SystemExit(f"rivalgg: no profile named {args.profile!r}")
-        store.app_profiles[_app_id(args.app)] = args.profile
-        store.save()
-    elif action == "remove":
-        if store.app_profiles.pop(_app_id(args.app), None) is None:
-            raise SystemExit(f"rivalgg: no rule for {_app_id(args.app)}")
-        store.save()
-    elif action == "focused":
-        from gi.repository import Gio, GLib
-        try:
-            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-            reply = bus.call_sync(autoswitch.FOCUS_BUS_NAME, autoswitch.FOCUS_PATH,
-                                  autoswitch.FOCUS_IFACE, "GetFocusedApp", None, None,
-                                  Gio.DBusCallFlags.NONE, 2000, None)
-        except GLib.Error:
-            raise SystemExit("rivalgg: the rivalgg-focus GNOME Shell extension isn't running")
-        print(reply.unpack()[0] or "(no app)")
-
-
 def cmd_battery_warnings(args):
     store = Store()
     if args.state:
@@ -347,16 +310,6 @@ def main(argv=None):
     rp.add_argument("new")
     psub.add_parser("delete", help="delete a profile").add_argument("name")
     sp.set_defaults(func=cmd_profile)
-
-    sp = sub.add_parser("app-profile", help="use a profile while an app is focused")
-    asub = sp.add_subparsers(dest="app_action", required=True)
-    asub.add_parser("list", help="show the app rules")
-    ap_set = asub.add_parser("set", help="e.g. app-profile set steam Gaming")
-    ap_set.add_argument("app", help="desktop app ID, e.g. steam or org.gnome.Nautilus")
-    ap_set.add_argument("profile")
-    asub.add_parser("remove", help="remove an app's rule").add_argument("app")
-    asub.add_parser("focused", help="print the focused app's ID (to write rules)")
-    sp.set_defaults(func=cmd_app_profile)
 
     sp = sub.add_parser("battery-warnings", help="low-battery notifications on or off")
     sp.add_argument("state", choices=["on", "off"], nargs="?")

@@ -82,6 +82,7 @@ class Store:
         self.path = path
         self.profiles = {DEFAULT_NAME: Profile()}
         self.active = DEFAULT_NAME
+        self.battery_warnings = True  # app-wide, not per profile
         self.fresh = True  # no saved configuration yet
         self.load()
 
@@ -96,6 +97,7 @@ class Store:
         if not self.profiles:
             self.profiles = {DEFAULT_NAME: Profile()}
         self.active = data.get("active", DEFAULT_NAME)
+        self.battery_warnings = data.get("battery_warnings", True)
         if self.active not in self.profiles:
             self.active = next(iter(self.profiles))
 
@@ -104,6 +106,7 @@ class Store:
         tmp = self.path + ".tmp"
         with open(tmp, "w") as f:
             json.dump({"active": self.active,
+                       "battery_warnings": self.battery_warnings,
                        "profiles": {n: pr.to_json() for n, pr in self.profiles.items()}},
                       f, indent=2)
         os.replace(tmp, self.path)

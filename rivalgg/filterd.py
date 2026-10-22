@@ -10,12 +10,13 @@ import os
 import select
 import signal
 import sys
+import threading
 import time
 
 import evdev
 from evdev import ecodes as e
 
-from . import device
+from . import battery, device
 from . import protocol as p
 from .motion import MotionFilter
 from .profiles import CONFIG_FILE, Store
@@ -24,6 +25,7 @@ DEBUG = os.environ.get("RIVALGG_DEBUG") == "1"
 TRACE_PATH = os.environ.get("RIVALGG_TRACE")  # per-report CSV for diagnosis
 CONFIG_CHECK_S = 1.0
 RETRY_S = 3.0
+BATTERY_POLL_S = 300
 
 
 def log(message):
@@ -63,6 +65,7 @@ class Settings:
     def __init__(self):
         self._mtime = None
         self.levels = (0, 0, 0)
+        self.battery_warnings = True
         self.style = None
         self.presets = [p.CPI_MIN]
         self.cpi = None
@@ -75,7 +78,9 @@ class Settings:
         if mtime == self._mtime:
             return False
         self._mtime = mtime
-        profile = Store().current
+        store = Store()
+        self.battery_warnings = store.battery_warnings
+        profile = store.current
         self.levels = (profile.accel_level, profile.decel_level, profile.smoothing_level)
         self.style = profile.motion_style
         self.presets = sorted(set(profile.cpi_presets))
@@ -92,15 +97,51 @@ class Service:
     def __init__(self):
         self.settings = Settings()
         self.running = True
+        self.battery = battery.BatteryMonitor()
+        self._battery_lock = threading.Lock()
+        self._listener = None
 
     def stop(self, *_):
         self.running = False
 
+    def on_event(self, code, value, raw):
+        self.settings.on_event(code, value, raw)
+        if code == p.EVENT_BATTERY:  # §2.4
+            self.battery_level(value)
+
+    def battery_level(self, level):
+        if not self.settings.battery_warnings:
+            return
+        with self._battery_lock:
+            warning = self.battery.update(level)
+        if warning:
+            log(f"battery {level} %: notifying")
+            try:
+                battery.notify(warning)
+            except Exception as err:  # no notification service; keep running
+                log(f"notification failed: {err}")
+
+    def _watch_device(self):
+        """Keep the event listener alive and poll the battery (§5)."""
+        next_poll = 0.0
+        while self.running:
+            if self._listener is None or not self._listener.alive:
+                try:
+                    self._listener = device.EventListener(self.on_event).start()
+                except device.DeviceError:
+                    self._listener = None
+            if time.monotonic() >= next_poll:
+                next_poll = time.monotonic() + BATTERY_POLL_S
+                try:
+                    with device.Mouse() as m:
+                        if m.linked():  # don't query a sleeping or Bluetooth mouse
+                            self.battery_level(m.battery().level)
+                except device.DeviceError:
+                    pass
+            time.sleep(RETRY_S)
+
     def run(self):
-        try:
-            device.EventListener(self.settings.on_event).start()
-        except device.DeviceError:
-            log("CPI button changes won't be tracked")
+        threading.Thread(target=self._watch_device, daemon=True).start()
         while self.running:
             self.settings.refresh()
             if not any(self.settings.levels):

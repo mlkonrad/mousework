@@ -181,6 +181,14 @@ def cmd_profile(args):
     store.save()
 
 
+def cmd_battery_warnings(args):
+    store = Store()
+    if args.state:
+        store.battery_warnings = args.state == "on"
+        store.save()
+    print(f"low battery warnings: {'on' if store.battery_warnings else 'off'}")
+
+
 def cmd_pair(args):
     with device.Mouse() as m:
         if m.radio_status() not in p.RADIO_UNLINKED:
@@ -270,6 +278,10 @@ def main(argv=None):
     sp.add_argument("action", choices=["list", "show", "new", "delete", "use"])
     sp.add_argument("name", nargs="?")
     sp.set_defaults(func=cmd_profile)
+
+    sp = sub.add_parser("battery-warnings", help="low-battery notifications on or off")
+    sp.add_argument("state", choices=["on", "off"], nargs="?")
+    sp.set_defaults(func=cmd_battery_warnings)
 
     sub.add_parser("pair", help="pair the mouse with the receiver").set_defaults(func=cmd_pair)
     sub.add_parser("events", help="print live mouse events").set_defaults(func=cmd_events)

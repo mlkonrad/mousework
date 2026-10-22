@@ -1,5 +1,5 @@
 [Unit]
-Description=rivalgg motion filter for the SteelSeries Rival 3 Wireless
+Description=rivalgg for the SteelSeries Rival 3 Wireless (motion filter, battery warnings)
 After=graphical-session.target
 PartOf=graphical-session.target
 

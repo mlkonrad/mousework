@@ -24,6 +24,7 @@ references such as `§3.1` in the code point into that spec.
 | Named profiles | host (`~/.config/rivalgg/profiles.json`) |
 | Follows CPI changes made with the on-mouse button | live events |
 | Acceleration, deceleration and smoothing (0–10 each) | host, via `rivalgg-filter` |
+| Low-battery notifications at 15 % and 5 % (can be turned off) | host, via `rivalgg-filter` |
 
 Not implemented:
 
@@ -53,6 +54,7 @@ rivalgg light breathe --stops ff0000@0 0000ff@50
 rivalgg bind back=key:ctrl+c forward=media:next
 rivalgg profile new Gaming && rivalgg profile use Gaming
 rivalgg events                               # watch CPI button, link and battery events
+rivalgg battery-warnings off                 # or on
 ```
 
 On first run, rivalgg imports what the mouse can report (CPI, polling, power

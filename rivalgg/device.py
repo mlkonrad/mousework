@@ -1,5 +1,7 @@
 """hidraw transport for the Rival 3 Wireless (§1.2, §2)."""
 
+import contextlib
+import fcntl
 import glob
 import os
 import select
@@ -9,6 +11,10 @@ import time
 from . import protocol as p
 
 COMMAND_GAP_S = 0.030  # §2.3
+# Shared by every rivalgg process (app, CLI, service): responses carry no
+# opcode echo (§2.1), so two processes querying at once could read each
+# other's answers. Each query holds this lock from request to response.
+LOCK_PATH = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "rivalgg.lock")
 QUERY_TIMEOUT_S = 1.0
 
 
@@ -145,12 +151,18 @@ class Mouse:
         finally:
             self._last = time.monotonic()
 
+    @contextlib.contextmanager
+    def _exclusive(self):
+        with self._lock, open(LOCK_PATH, "a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            yield
+
     def send(self, payload):
-        with self._lock:
+        with self._exclusive():
             self._write(payload)
 
     def query(self, payload, timeout=QUERY_TIMEOUT_S):
-        with self._lock:
+        with self._exclusive():
             self._drain()
             self._write(payload)
             ready, _, _ = select.select([self.fd], [], [], timeout)
@@ -255,6 +267,10 @@ class EventListener:
     def start(self):
         self._thread.start()
         return self
+
+    @property
+    def alive(self):
+        return self._thread.is_alive()
 
     def stop(self):
         self._stop.set()

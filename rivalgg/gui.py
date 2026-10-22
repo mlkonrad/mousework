@@ -217,9 +217,18 @@ class Window(Adw.ApplicationWindow):
         self.pair_button = Gtk.Button(label="Pair", valign=Gtk.Align.CENTER)
         self.pair_button.connect("clicked", self._pair)
         self.row_link.add_suffix(self.pair_button)
-        for row in (self.row_link, self.row_battery, self.row_firmware):
+        self.battery_warnings = Adw.SwitchRow(
+            title="Low battery warnings",
+            subtitle="Notify at 15 % and 5 %, even when this window is closed")
+        self.battery_warnings.set_active(self.store.battery_warnings)
+        self.battery_warnings.connect("notify::active", self._on_battery_warnings)
+        for row in (self.row_link, self.row_battery, self.battery_warnings, self.row_firmware):
             group.add(row)
         return group
+
+    def _on_battery_warnings(self, row, _pspec):
+        self.store.battery_warnings = row.get_active()
+        self.store.save()
 
     def _build_cpi(self):
         group = Adw.PreferencesGroup(title="Sensitivity",

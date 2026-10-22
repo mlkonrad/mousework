@@ -581,7 +581,7 @@ class Window(Adw.ApplicationWindow):
                 m.set_wheel(wheel)
             m.save_to_flash()
 
-        self.worker.run(work, error=self._device_error)
+        self.worker.run(work, done=self._saved_to_flash, error=self._device_error)
         return False
 
     # --- profiles ---
@@ -595,12 +595,18 @@ class Window(Adw.ApplicationWindow):
         self._load_profile()
         self._apply_full()
 
+    def _saved_to_flash(self, _result=None):
+        self.store.mark_saved()
+        self.store.save()
+
     def _apply_full(self):
         if not self.mouse or not self.linked:
             return
         profile = copy.deepcopy(self.profile)
-        self.worker.run(lambda: apply(profile, self.mouse),
-                        done=lambda _: self._toast("Profile applied"),
+        def done(_):
+            self._saved_to_flash()
+            self._toast("Profile applied")
+        self.worker.run(lambda: apply(profile, self.mouse), done=done,
                         error=self._device_error)
 
     def _ask_name(self, heading, initial, on_ok):
@@ -684,6 +690,11 @@ class Window(Adw.ApplicationWindow):
                 # overwriting it; buttons and lighting have no read-back.
                 import_from_device(self.profile, m)
                 state["imported"] = True
+            elif (on_connect or not self.linked) and self.store.mouse_may_differ:
+                # After a temporary switch a power-up brings back the saved
+                # profile; re-apply the active one instead of adopting its CPI.
+                apply(copy.deepcopy(self.profile), m, save=False)
+                state["cpi"] = m.cpi_table()
             elif on_connect or not self.linked:
                 resend_volatile(self.profile, m)  # §7.2
         return state

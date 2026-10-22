@@ -58,6 +58,7 @@ rivalgg bind back=key:ctrl+c forward=media:next
 rivalgg profile list                         # * marks the active profile
 rivalgg profile new Gaming && rivalgg profile use Gaming
 rivalgg profile next                         # or previous; handy for a keyboard shortcut
+rivalgg profile use Gaming --temporary       # for scripts: only differences, no flash save
 rivalgg profile current
 rivalgg events                               # watch CPI button, link and battery events
 rivalgg battery-warnings off                 # or on
@@ -66,6 +67,15 @@ rivalgg battery-warnings off                 # or on
 On first run, rivalgg imports what the mouse can report (CPI, polling, power
 settings). Button mappings and lighting have no read-back, so they stay as
 they are on the mouse until you change them.
+
+### Temporary switches
+
+`--temporary` (on `profile use`, `next` and `previous`) writes only the
+settings that differ from the active profile and doesn't save to the mouse's
+flash, so scripts can switch often without wearing it out. After a power
+cycle the mouse starts with the last saved profile; rivalgg remembers which
+one that is and re-applies the active profile when it reconnects. Any normal
+switch or setting change saves everything again.
 
 ## Motion filter
 

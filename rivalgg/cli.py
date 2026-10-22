@@ -6,7 +6,7 @@ import time
 
 from . import device
 from . import protocol as p
-from .profiles import Store, apply, import_from_device, set_polling_if_needed
+from .profiles import Store, apply, apply_changes, import_from_device, set_polling_if_needed
 
 
 def _rgb(text):
@@ -71,6 +71,9 @@ def _edit_profile(args, change, write):
     with device.Mouse() as m:
         write(m, profile)
         m.save_to_flash()
+    if profile is store.current:
+        store.mark_saved()  # the mouse now holds the whole active profile in flash
+        store.save()
 
 
 def cmd_cpi(args):
@@ -155,12 +158,20 @@ def cmd_motion(args):
           f"smoothing {pr.smoothing_level}, style {pr.motion_style}")
 
 
-def _switch_to(store, name):
-    store.active = name
-    store.save()
+def _switch_to(store, name, temporary=False):
+    """Write the profile to the mouse first, then record it as active, so a
+    failed write (mouse asleep) leaves the store unchanged."""
+    target = store.profiles[name]
     with device.Mouse() as m:
-        apply(store.current, m)
-    print(f"profile {name}")
+        if temporary:
+            apply_changes(target, store.current, m)
+        else:
+            apply(target, m)
+    store.active = name
+    if not temporary:
+        store.mark_saved()
+    store.save()
+    print(f"profile {name}" + (" (temporary)" if temporary else ""))
 
 
 def cmd_profile(args):
@@ -187,10 +198,10 @@ def cmd_profile(args):
         import json
         print(json.dumps(store.profiles[existing(args.name or store.active)].to_json(), indent=2))
     elif action == "use":
-        _switch_to(store, existing(args.name))
+        _switch_to(store, existing(args.name), args.temporary)
     elif action in ("next", "previous"):
         step = 1 if action == "next" else -1
-        _switch_to(store, names[(names.index(store.active) + step) % len(names)])
+        _switch_to(store, names[(names.index(store.active) + step) % len(names)], args.temporary)
     elif action == "new":
         from copy import deepcopy
         store.profiles[free(args.name)] = deepcopy(store.current)
@@ -301,9 +312,15 @@ def main(argv=None):
     psub.add_parser("list", help="all profiles; * marks the active one")
     psub.add_parser("current", help="print the active profile")
     psub.add_parser("show", help="print a profile as JSON").add_argument("name", nargs="?")
-    psub.add_parser("use", help="switch to a profile").add_argument("name")
-    psub.add_parser("next", help="switch to the next profile")
-    psub.add_parser("previous", help="switch to the previous profile")
+    temporary = argparse.ArgumentParser(add_help=False)
+    temporary.add_argument(
+        "--temporary", action="store_true",
+        help="write only what differs and don't save to the mouse's flash; for scripts "
+             "that switch often (after a power cycle the mouse starts with the last "
+             "saved profile)")
+    psub.add_parser("use", help="switch to a profile", parents=[temporary]).add_argument("name")
+    psub.add_parser("next", help="switch to the next profile", parents=[temporary])
+    psub.add_parser("previous", help="switch to the previous profile", parents=[temporary])
     psub.add_parser("new", help="copy the active profile").add_argument("name")
     rp = psub.add_parser("rename", help="rename a profile")
     rp.add_argument("old")

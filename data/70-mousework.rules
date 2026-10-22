@@ -3,6 +3,10 @@
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1830", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1831", TAG+="uaccess"
 
-# The mouse's evdev node (not its keyboard interface), so rivalgg-filter can
+# The mouse's evdev node (not its keyboard interface), so mousework-filter can
 # grab it and re-emit filtered motion through /dev/uinput.
 SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_MOUSE}=="1", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1830", TAG+="uaccess"
+
+# /dev/uinput, so mousework-filter can create its virtual mouse. Many systems
+# already allow this (for example via Steam's device rules).
+KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess"

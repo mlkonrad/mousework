@@ -16,7 +16,7 @@ from . import protocol as p  # noqa: E402
 from .profiles import (Profile, Store, apply, import_from_device, resend_volatile,
                        set_polling_if_needed)  # noqa: E402
 
-APP_ID = "io.github.rivalgg"
+APP_ID = "io.github.mlkonrad.Mousework"
 APPLY_DELAY_MS = 600
 POLL_INTERVAL_S = 5  # §1.4, §5
 
@@ -144,7 +144,7 @@ class KeyCaptureDialog(Adw.Dialog):
 
 class Window(Adw.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title="Rival 3 Wireless", default_width=560,
+        super().__init__(application=app, title="Mousework", default_width=560,
                          default_height=760)
         self.store = Store()
         self.worker = Worker()
@@ -311,7 +311,7 @@ class Window(Adw.ApplicationWindow):
     def _build_motion(self):
         group = Adw.PreferencesGroup(
             title="Motion",
-            description="Applied on this computer by the rivalgg-filter service")
+            description="Applied on this computer by the mousework-filter service")
         self.motion_rows = {}
         for key, title, subtitle in (
                 ("accel_level", "Acceleration", "Faster hand movement moves the pointer further"),

@@ -47,10 +47,10 @@ def notify(warning):
     from gi.repository import Gio, GLib
     bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     hints = {"urgency": GLib.Variant("y", 2 if warning.critical else 1),
-             "desktop-entry": GLib.Variant("s", "io.github.rivalgg")}
+             "desktop-entry": GLib.Variant("s", "io.github.mlkonrad.Mousework")}
     bus.call_sync(
         "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
         "org.freedesktop.Notifications", "Notify",
-        GLib.Variant("(susssasa{sv}i)", ("Rival 3 Wireless", 0, "battery-caution-symbolic",
+        GLib.Variant("(susssasa{sv}i)", ("Mousework", 0, "battery-caution-symbolic",
                                           warning.summary, warning.body, [], hints, -1)),
         None, Gio.DBusCallFlags.NONE, -1, None)

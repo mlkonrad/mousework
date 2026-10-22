@@ -1,4 +1,4 @@
-"""rivalgg command-line interface."""
+"""mousework command-line interface."""
 
 import argparse
 import sys
@@ -150,7 +150,7 @@ def cmd_motion(args):
                 setattr(pr, f"{key}_level", value)
         if args.style:
             pr.motion_style = args.style
-    # Host-side only: rivalgg-filter picks the change up from the profile.
+    # Host-side only: mousework-filter picks the change up from the profile.
     _edit_profile(args, change, lambda m, pr: None)
     store = Store()
     pr = store.current
@@ -181,12 +181,12 @@ def cmd_profile(args):
 
     def existing(name):
         if name not in store.profiles:
-            raise SystemExit(f"rivalgg: no profile named {name!r}; one of " + ", ".join(names))
+            raise SystemExit(f"mousework: no profile named {name!r}; one of " + ", ".join(names))
         return name
 
     def free(name):
         if name in store.profiles:
-            raise SystemExit(f"rivalgg: a profile named {name!r} already exists")
+            raise SystemExit(f"mousework: a profile named {name!r} already exists")
         return name
 
     if action == "list":
@@ -258,7 +258,8 @@ def cmd_events(args):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="rivalgg", description="SteelSeries Rival 3 Wireless")
+    ap = argparse.ArgumentParser(prog="mousework",
+                                 description="Settings for the SteelSeries Rival 3 Wireless (unofficial)")
     sub = ap.add_subparsers(dest="command", required=True)
 
     def editing(name, **kw):
@@ -339,7 +340,7 @@ def main(argv=None):
     try:
         args.func(args)
     except (device.DeviceError, ValueError) as e:
-        sys.exit(f"rivalgg: {e}")
+        sys.exit(f"mousework: {e}")
 
 
 if __name__ == "__main__":

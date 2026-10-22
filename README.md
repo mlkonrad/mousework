@@ -1,14 +1,20 @@
-# rivalgg
+# Mousework
 
 Settings for the **SteelSeries Rival 3 Wireless** (USB `1038:1830`) on Linux:
-a GTK 4 / libadwaita app and a command-line tool.
+a GTK 4 / libadwaita app, a command-line tool and a small background service.
+
+Mousework is an independent project. It is not made, endorsed or supported by
+SteelSeries. SteelSeries, Rival and SteelSeries GG are trademarks of their
+owners and are used here only to say which hardware Mousework works with.
 
 ## Clean-room provenance
 
-This code was written only from the behavioral specification in
-`../spec/SPEC.md`. The implementer never saw SteelSeries GG's files,
-decompiled code or reverse-engineering notes (`../re-work/`). Section
-references such as `§3.1` in the code point into that spec.
+Mousework was written from a behavioral specification of how SteelSeries GG
+talks to this mouse, produced in a separate reverse-engineering pass for
+interoperability. The people writing Mousework's code never saw GG's files,
+decompiled code or reverse-engineering notes. Section references such as
+`§3.1` in the code point into that specification, which is not part of this
+repository.
 
 ## Features
 
@@ -21,10 +27,10 @@ references such as `§3.1` in the code point into that spec.
 | Remapping 6 buttons and the wheel: clicks, CPI cycle, keyboard shortcuts, media keys | on the mouse |
 | Battery level, firmware versions, connection state | read from the mouse |
 | Pairing the mouse with the receiver | receiver |
-| Named profiles | host (`~/.config/rivalgg/profiles.json`) |
+| Named profiles | host (`~/.config/mousework/profiles.json`) |
 | Follows CPI changes made with the on-mouse button | live events |
-| Acceleration, deceleration and smoothing (0–10 each) | host, via `rivalgg-filter` |
-| Low-battery notifications at 15 % and 5 % (can be turned off) | host, via `rivalgg-filter` |
+| Acceleration, deceleration and smoothing (0–10 each) | host, via `mousework-filter` |
+| Low-battery notifications at 15 % and 5 % (can be turned off) | host, via `mousework-filter` |
 
 Not implemented:
 
@@ -32,39 +38,54 @@ Not implemented:
 - Macros (§3.6).
 - Automatic per-application profile switching (§7.4). GNOME on Wayland
   doesn't tell apps which window is focused; anything that does (a Shell
-  extension, a compositor script) can call `rivalgg profile use NAME`.
+  extension, a compositor script) can call `mousework profile use NAME`.
 
 ## Install
 
+Mousework needs Python 3.11+, PyGObject with GTK 4 and libadwaita, and
+python-evdev. `install.sh` checks for them and prints the command for your
+distribution if something is missing.
+
 ```sh
-sudo install -m644 data/70-rivalgg.rules /etc/udev/rules.d/   # access without root
-sudo udevadm control --reload && sudo udevadm trigger
-python3 -m pip install --user --no-deps --editable .         # uses system python3-gobject, python3-evdev
-install -Dm644 data/io.github.rivalgg.desktop ~/.local/share/applications/io.github.rivalgg.desktop
-install -Dm644 data/rivalgg-filter.service ~/.config/systemd/user/rivalgg-filter.service
-systemctl --user enable --now rivalgg-filter                  # idle until a motion level is above 0
+git clone https://github.com/mlkonrad/mousework.git
+cd mousework
+./install.sh            # or ./install.sh --dev to run from this checkout
 ```
+
+The script installs everything for your user (`~/.local/share/mousework`,
+launchers in `~/.local/bin`, an app-grid entry and the `mousework-filter`
+systemd user service). It asks for sudo once, for the udev rule
+`/etc/udev/rules.d/70-mousework.rules`, which gives the logged-in user access
+to:
+
+- the receiver's hidraw interfaces, to read and change the mouse's settings;
+- the mouse's input device (not its keyboard interface), so the motion filter
+  can read movement;
+- `/dev/uinput`, so the motion filter can create its virtual mouse. Any program
+  you run can use uinput to send input events; many systems allow this already.
+
+To remove it: `./uninstall.sh` (add `--purge` to delete your profiles too).
 
 ## Use
 
 ```sh
-rivalgg-gtk                                  # the app
-rivalgg status
-rivalgg cpi 400 800 1600 --active 800
-rivalgg polling 1000
-rivalgg power --high-efficiency off --sleep 10
-rivalgg light breathe --stops ff0000@0 0000ff@50
-rivalgg bind back=key:ctrl+c forward=media:next
-rivalgg profile list                         # * marks the active profile
-rivalgg profile new Gaming && rivalgg profile use Gaming
-rivalgg profile next                         # or previous; handy for a keyboard shortcut
-rivalgg profile use Gaming --temporary       # for scripts: only differences, no flash save
-rivalgg profile current
-rivalgg events                               # watch CPI button, link and battery events
-rivalgg battery-warnings off                 # or on
+mousework-gtk                                  # the app
+mousework status
+mousework cpi 400 800 1600 --active 800
+mousework polling 1000
+mousework power --high-efficiency off --sleep 10
+mousework light breathe --stops ff0000@0 0000ff@50
+mousework bind back=key:ctrl+c forward=media:next
+mousework profile list                         # * marks the active profile
+mousework profile new Gaming && mousework profile use Gaming
+mousework profile next                         # or previous; handy for a keyboard shortcut
+mousework profile use Gaming --temporary       # for scripts: only differences, no flash save
+mousework profile current
+mousework events                               # watch CPI button, link and battery events
+mousework battery-warnings off                 # or on
 ```
 
-On first run, rivalgg imports what the mouse can report (CPI, polling, power
+On first run, Mousework imports what the mouse can report (CPI, polling, power
 settings). Button mappings and lighting have no read-back, so they stay as
 they are on the mouse until you change them.
 
@@ -73,7 +94,7 @@ they are on the mouse until you change them.
 `--temporary` (on `profile use`, `next` and `previous`) writes only the
 settings that differ from the active profile and doesn't save to the mouse's
 flash, so scripts can switch often without wearing it out. After a power
-cycle the mouse starts with the last saved profile; rivalgg remembers which
+cycle the mouse starts with the last saved profile; Mousework remembers which
 one that is and re-applies the active profile when it reconnects. Any normal
 switch or setting change saves everything again.
 
@@ -81,13 +102,13 @@ switch or setting change saves everything again.
 
 Acceleration, deceleration and smoothing (GG calls smoothing "angle
 snapping", §3.7.2) are computed on the computer, not on the mouse.
-`rivalgg-filter` grabs the mouse's input device and re-emits the filtered
+`mousework-filter` grabs the mouse's input device and re-emits the filtered
 motion as a virtual mouse. When all three levels are 0 it leaves the mouse alone.
 
 ```sh
-rivalgg motion --accel 4 --decel 3 --smoothing 2
-rivalgg motion --style gg              # exactly like SteelSeries GG
-journalctl --user -u rivalgg-filter    # what the filter is doing
+mousework motion --accel 4 --decel 3 --smoothing 2
+mousework motion --style gg              # exactly like SteelSeries GG
+journalctl --user -u mousework-filter    # what the filter is doing
 ```
 
 Filter styles:
@@ -103,14 +124,19 @@ Filter styles:
 Over Bluetooth the filter does nothing, and the app greys out all settings
 (the mouse has no settings channel in that mode, §7.5).
 
-Diagnostics: `RIVALGG_DEBUG=1` logs button and settings events, and
-`RIVALGG_TRACE=/path/trace.csv` records every report (input, output, latency).
+Diagnostics: `MOUSEWORK_DEBUG=1` logs button and settings events, and
+`MOUSEWORK_TRACE=/path/trace.csv` records every report (input, output, latency).
 
 GNOME's own pointer acceleration still applies on top of the filter. Set
-Settings → Mouse → Acceleration to off (flat) if you only want rivalgg's.
+Settings → Mouse → Acceleration to off (flat) if you only want Mousework's.
 
-## Tests
+## Development
 
 ```sh
+./install.sh --dev                         # code changes apply on the next start
 python3 -m unittest discover -s tests -t .
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).

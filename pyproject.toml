@@ -3,18 +3,18 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rivalgg"
+name = "mousework"
 version = "0.1.0"
 description = "Settings for the SteelSeries Rival 3 Wireless on Linux"
 requires-python = ">=3.11"
-license = "GPL-3.0-or-later"
+license = "MIT"
 
 [project.scripts]
-rivalgg = "rivalgg.cli:main"
-rivalgg-filter = "rivalgg.filterd:main"
+mousework = "mousework.cli:main"
+mousework-filter = "mousework.filterd:main"
 
 [project.gui-scripts]
-rivalgg-gtk = "rivalgg.gui:main"
+mousework-gtk = "mousework.gui:main"
 
 [tool.setuptools]
-packages = ["rivalgg"]
+packages = ["mousework"]

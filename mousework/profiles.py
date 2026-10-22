@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, field
 from . import protocol as p
 
 CONFIG_DIR = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
-                          "rivalgg")
+                          "mousework")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "profiles.json")
 DEFAULT_NAME = "Default"
 
@@ -26,7 +26,7 @@ class Profile:
     buttons: dict = field(default_factory=lambda: {
         name: p.format_action(b) for name, b in {**p.DEFAULT_BUTTONS, **p.DEFAULT_WHEEL}.items()
     })
-    # Host-side motion filter (§3.7), applied by rivalgg-filter
+    # Host-side motion filter (§3.7), applied by mousework-filter
     accel_level: int = 0
     decel_level: int = 0
     smoothing_level: int = 0

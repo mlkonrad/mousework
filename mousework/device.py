@@ -11,10 +11,10 @@ import time
 from . import protocol as p
 
 COMMAND_GAP_S = 0.030  # §2.3
-# Shared by every rivalgg process (app, CLI, service): responses carry no
+# Shared by every mousework process (app, CLI, service): responses carry no
 # opcode echo (§2.1), so two processes querying at once could read each
 # other's answers. Each query holds this lock from request to response.
-LOCK_PATH = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "rivalgg.lock")
+LOCK_PATH = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "mousework.lock")
 QUERY_TIMEOUT_S = 1.0
 
 

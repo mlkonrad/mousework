@@ -2,7 +2,7 @@ import unittest
 
 import random
 
-from rivalgg.motion import STYLE_GG, MotionFilter, decel_percent, isqrt
+from mousework.motion import STYLE_GG, MotionFilter, decel_percent, isqrt
 
 
 def run(f, reports, dt):

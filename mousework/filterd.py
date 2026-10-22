@@ -21,8 +21,8 @@ from . import protocol as p
 from .motion import MotionFilter
 from .profiles import CONFIG_FILE, Store
 
-DEBUG = os.environ.get("RIVALGG_DEBUG") == "1"
-TRACE_PATH = os.environ.get("RIVALGG_TRACE")  # per-report CSV for diagnosis
+DEBUG = os.environ.get("MOUSEWORK_DEBUG") == "1"
+TRACE_PATH = os.environ.get("MOUSEWORK_TRACE")  # per-report CSV for diagnosis
 CONFIG_CHECK_S = 1.0
 RETRY_S = 3.0
 BATTERY_POLL_S = 300
@@ -30,7 +30,7 @@ BATTERY_POLL_S = 300
 
 def log(message):
     try:
-        print(f"{time.strftime('%H:%M:%S')} rivalgg-filter: {message}", file=sys.stderr,
+        print(f"{time.strftime('%H:%M:%S')} mousework-filter: {message}", file=sys.stderr,
               flush=True)
     except OSError:
         # The log reader went away (for example tee after Ctrl+C). Logging must
@@ -173,7 +173,7 @@ class Service:
         press that never gets its release.
         """
         held = set()
-        with evdev.UInput.from_device(dev, name="rivalgg filtered mouse") as out:
+        with evdev.UInput.from_device(dev, name="Mousework filtered mouse") as out:
             dev.grab()
             log(f"grabbed {dev.path}")
             try:

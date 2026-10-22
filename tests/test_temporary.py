@@ -3,9 +3,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-from rivalgg import cli, device, profiles
-from rivalgg import protocol as p
-from rivalgg.profiles import Profile, Store, apply_changes
+from mousework import cli, device, profiles
+from mousework import protocol as p
+from mousework.profiles import Profile, Store, apply_changes
 
 
 class FakeMouse:

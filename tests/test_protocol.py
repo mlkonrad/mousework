@@ -1,7 +1,7 @@
 import unittest
 
-from rivalgg import protocol as p
-from rivalgg.profiles import Profile
+from mousework import protocol as p
+from mousework.profiles import Profile
 
 
 class CpiTests(unittest.TestCase):
@@ -123,8 +123,8 @@ class FakeMouse:
 
 class ProfileTests(unittest.TestCase):
     def test_unmanaged_lighting_and_buttons_not_written(self):
-        from rivalgg.profiles import apply, resend_volatile
-        import rivalgg.profiles as profiles
+        from mousework.profiles import apply, resend_volatile
+        import mousework.profiles as profiles
         profiles.time.sleep = lambda s: None
         m = FakeMouse()
         apply(Profile(), m)

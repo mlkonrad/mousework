@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=Rival 3 Wireless
-Comment=Configure your SteelSeries Rival 3 Wireless mouse
-Exec=rivalgg-gtk
+Name=Mousework
+Comment=Settings for the SteelSeries Rival 3 Wireless mouse (unofficial)
+Exec=mousework-gtk
 Icon=input-mouse
 Terminal=false
 Type=Application

@@ -1,6 +1,6 @@
 import unittest
 
-from rivalgg.battery import BatteryMonitor
+from mousework.battery import BatteryMonitor
 
 
 def feed(levels):
@@ -39,7 +39,7 @@ class SettingTests(unittest.TestCase):
     def test_store_round_trip(self):
         import os
         import tempfile
-        from rivalgg.profiles import Store
+        from mousework.profiles import Store
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "profiles.json")
             self.assertTrue(Store(path).battery_warnings)  # default on
@@ -49,7 +49,7 @@ class SettingTests(unittest.TestCase):
             self.assertFalse(Store(path).battery_warnings)
 
     def test_service_respects_off(self):
-        from rivalgg import filterd
+        from mousework import filterd
         sent = []
         original = filterd.battery.notify
         self.addCleanup(setattr, filterd.battery, "notify", original)

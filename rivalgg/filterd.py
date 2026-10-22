@@ -16,7 +16,7 @@ import time
 import evdev
 from evdev import ecodes as e
 
-from . import battery, device
+from . import autoswitch, battery, device
 from . import protocol as p
 from .motion import MotionFilter
 from .profiles import CONFIG_FILE, Store
@@ -66,6 +66,7 @@ class Settings:
         self._mtime = None
         self.levels = (0, 0, 0)
         self.battery_warnings = True
+        self.effective_name = None  # profile chosen by per-app switching
         self.style = None
         self.presets = [p.CPI_MIN]
         self.cpi = None
@@ -80,12 +81,15 @@ class Settings:
         self._mtime = mtime
         store = Store()
         self.battery_warnings = store.battery_warnings
-        profile = store.current
+        profile = store.profiles.get(self.effective_name) or store.current
         self.levels = (profile.accel_level, profile.decel_level, profile.smoothing_level)
         self.style = profile.motion_style
         self.presets = sorted(set(profile.cpi_presets))
         self.cpi = profile.active_cpi
         return True
+
+    def force_reload(self):
+        self._mtime = None
 
     def on_event(self, code, value, _raw):
         # §2.4: the on-mouse CPI button reports the new 1-based preset
@@ -142,6 +146,8 @@ class Service:
 
     def run(self):
         threading.Thread(target=self._watch_device, daemon=True).start()
+        switcher = autoswitch.AutoSwitcher(self.settings, log).start()
+        autoswitch.FocusWatcher(switcher.focus_changed).start()
         while self.running:
             self.settings.refresh()
             if not any(self.settings.levels):

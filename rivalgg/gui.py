@@ -11,7 +11,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from . import device  # noqa: E402
+from . import autoswitch, device  # noqa: E402
 from . import protocol as p  # noqa: E402
 from .profiles import (Profile, Store, apply, import_from_device, resend_volatile,
                        set_polling_if_needed)  # noqa: E402
@@ -59,6 +59,51 @@ def rgba(rgb):
 
 def rgb(color):
     return tuple(round(c * 255) for c in (color.red, color.green, color.blue))
+
+
+def app_name(app_id):
+    try:
+        info = Gio.DesktopAppInfo.new(app_id)
+    except TypeError:
+        info = None
+    return info.get_name() if info else app_id
+
+
+class AppPicker(Adw.Dialog):
+    """Search the installed apps and pick one."""
+
+    def __init__(self, on_pick):
+        super().__init__(title="Choose an App", content_width=380, content_height=520)
+        self.on_pick = on_pick
+        apps = sorted((a for a in Gio.AppInfo.get_all() if a.should_show() and a.get_id()),
+                      key=lambda a: a.get_name().lower())
+        self.search = Gtk.SearchEntry(placeholder_text="Search apps", margin_start=12,
+                                      margin_end=12, margin_top=6, margin_bottom=6)
+        self.listbox = Gtk.ListBox(css_classes=["boxed-list"], margin_start=12, margin_end=12,
+                                   margin_bottom=12, selection_mode=Gtk.SelectionMode.NONE)
+        for info in apps:
+            row = Adw.ActionRow(title=info.get_name(), subtitle=info.get_id(), activatable=True,
+                                use_markup=False)
+            icon = info.get_icon()
+            if icon:
+                row.add_prefix(Gtk.Image(gicon=icon, pixel_size=32))
+            row.app_id = info.get_id()
+            row.search_text = f"{info.get_name()} {info.get_id()}".lower()
+            row.connect("activated", self._picked)
+            self.listbox.append(row)
+        self.listbox.set_filter_func(
+            lambda row: self.search.get_text().lower() in row.search_text)
+        self.search.connect("search-changed", lambda *_: self.listbox.invalidate_filter())
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(self.search)
+        box.append(Gtk.ScrolledWindow(child=self.listbox, vexpand=True))
+        toolbar = Adw.ToolbarView(content=box)
+        toolbar.add_top_bar(Adw.HeaderBar())
+        self.set_child(toolbar)
+
+    def _picked(self, row):
+        self.on_pick(row.app_id)
+        self.close()
 
 
 def describe_action(action):
@@ -190,9 +235,10 @@ class Window(Adw.ApplicationWindow):
             page.add(group)
         self.stops_group = Adw.PreferencesGroup(title="Colours")
         page.add(self.stops_group)
-        self.settings_groups += [self.stops_group, self._build_buttons(), self._build_motion()]
-        page.add(self.settings_groups[-2])
-        page.add(self.settings_groups[-1])
+        self.settings_groups += [self.stops_group, self._build_buttons(), self._build_motion(),
+                                 self._build_app_profiles()]
+        for group in self.settings_groups[-3:]:
+            page.add(group)
         self.page = page
         toolbar.set_content(page)
         self.toasts.set_child(toolbar)
@@ -308,6 +354,67 @@ class Window(Adw.ApplicationWindow):
             group.add(row)
         return group
 
+    def _build_app_profiles(self):
+        group = Adw.PreferencesGroup(title="Automatic Profiles",
+                                     description="Use a profile while an app is focused")
+        self.focus_missing = Adw.ActionRow(
+            title="Focus extension not running",
+            subtitle="Enable the rivalgg-focus GNOME Shell extension (see README)",
+            icon_name="dialog-warning-symbolic", visible=False)
+        self.auto_status = Adw.ActionRow(title="Now using", visible=False, use_markup=False)
+        group.add(self.focus_missing)
+        group.add(self.auto_status)
+        self.rules_group = group
+        self._rule_rows = []
+        return group
+
+    def _rebuild_rules(self):
+        for row in self._rule_rows:
+            self.rules_group.remove(row)
+        self._rule_rows = []
+        names = list(self.store.profiles)
+        for app_id, profile in sorted(self.store.app_profiles.items(), key=lambda r: app_name(r[0])):
+            row = Adw.ComboRow(title=app_name(app_id), subtitle=app_id, model=string_list(names),
+                               use_markup=False)
+            row.set_selected(names.index(profile))
+            row.connect("notify::selected", self._on_rule_changed, app_id)
+            remove = Gtk.Button(icon_name="list-remove-symbolic", valign=Gtk.Align.CENTER,
+                                tooltip_text="Remove Rule", css_classes=["flat"])
+            remove.connect("clicked", self._remove_rule, app_id)
+            row.add_suffix(remove)
+            self.rules_group.add(row)
+            self._rule_rows.append(row)
+        add = Adw.ButtonRow(title="Add App…", start_icon_name="list-add-symbolic")
+        add.connect("activated", lambda *_: AppPicker(self._add_rule).present(self))
+        self.rules_group.add(add)
+        self._rule_rows.append(add)
+
+    def _add_rule(self, app_id):
+        others = [n for n in self.store.profiles if n != self.store.active]
+        self.store.app_profiles[app_id] = (others or [self.store.active])[0]
+        self.store.save()
+        self._rebuild_rules()
+
+    def _on_rule_changed(self, row, _pspec, app_id):
+        self.store.app_profiles[app_id] = list(self.store.profiles)[row.get_selected()]
+        self.store.save()
+
+    def _remove_rule(self, _button, app_id):
+        self.store.app_profiles.pop(app_id, None)
+        self.store.save()
+        self._rebuild_rules()
+
+    def _show_auto(self, state):
+        """Reflect the service's per-app switching (§7.4)."""
+        self.focus_missing.set_visible(bool(self.store.app_profiles)
+                                       and not state.get("focus_extension", True))
+        auto = state.get("auto")
+        active = bool(auto) and auto.get("profile") != self.store.active
+        self.auto_status.set_visible(active)
+        if active:
+            app = auto.get("app")
+            self.auto_status.set_subtitle(auto["profile"] + (f" for {app_name(app)}" if app else ""))
+
     def _build_motion(self):
         group = Adw.PreferencesGroup(
             title="Motion",
@@ -346,6 +453,7 @@ class Window(Adw.ApplicationWindow):
         names = list(self.store.profiles)
         self.profile_dropdown.set_model(string_list(names))
         self.profile_dropdown.set_selected(names.index(self.store.active))
+        self._rebuild_rules()
         self._loading = False
 
     def _load_profile(self):
@@ -634,9 +742,7 @@ class Window(Adw.ApplicationWindow):
         old = self.store.active
 
         def rename(name):
-            self.store.profiles = {name if k == old else k: v
-                                   for k, v in self.store.profiles.items()}
-            self.store.active = name
+            self.store.rename(old, name)
             self.store.save()
             self._reload_profiles()
         self._ask_name("Rename Profile", old, rename)
@@ -645,8 +751,7 @@ class Window(Adw.ApplicationWindow):
         if len(self.store.profiles) == 1:
             self._toast("The last profile cannot be deleted")
             return
-        del self.store.profiles[self.store.active]
-        self.store.active = next(iter(self.store.profiles))
+        self.store.delete(self.store.active)
         self.store.save()
         self._reload_profiles()
         self._load_profile()
@@ -674,7 +779,12 @@ class Window(Adw.ApplicationWindow):
                     return {"bluetooth": True}
                 raise
         m = self.mouse
-        state = {"radio": m.radio_status(), "receiver": m.receiver_version()}
+        state = {"radio": m.radio_status(), "receiver": m.receiver_version(),
+                 "auto": autoswitch.read_state()}
+        try:
+            state["focus_extension"] = autoswitch.focus_extension_running()
+        except Exception:  # no session bus
+            pass
         if state["radio"] != p.RADIO_LINKED and device.bluetooth_present():
             state["bluetooth"] = True
             return state
@@ -735,7 +845,11 @@ class Window(Adw.ApplicationWindow):
                 self.store.fresh = False
                 self.store.save()
                 self._load_profile()
-            self._adopt_cpi(state["cpi"])
+            self._show_auto(state)
+            auto = state.get("auto")
+            if not auto or auto.get("profile") == self.store.active:
+                # Never copy an automatic profile's CPI into the active one.
+                self._adopt_cpi(state["cpi"])
         if self._listener is None:
             try:
                 self._listener = device.EventListener(self._on_event).start()
@@ -756,7 +870,9 @@ class Window(Adw.ApplicationWindow):
 
     def _on_event(self, code, value, _raw):
         if code == p.EVENT_CPI_CHANGED:
-            self.worker.run(lambda: self.mouse.cpi_table(), done=self._adopt_cpi)
+            auto = autoswitch.read_state()
+            if not auto or auto.get("profile") == self.store.active:
+                self.worker.run(lambda: self.mouse.cpi_table(), done=self._adopt_cpi)
         elif code in (p.EVENT_LINK, p.EVENT_BATTERY):
             call_once(self._poll)
 

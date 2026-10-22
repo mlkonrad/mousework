@@ -155,30 +155,89 @@ def cmd_motion(args):
           f"smoothing {pr.smoothing_level}, style {pr.motion_style}")
 
 
+def _switch_to(store, name):
+    store.active = name
+    store.save()
+    with device.Mouse() as m:
+        apply(store.current, m)
+    print(f"profile {name}")
+
+
 def cmd_profile(args):
     store = Store()
-    if args.action == "list":
-        for name in store.profiles:
+    action = args.profile_action
+    names = list(store.profiles)
+
+    def existing(name):
+        if name not in store.profiles:
+            raise SystemExit(f"rivalgg: no profile named {name!r}; one of " + ", ".join(names))
+        return name
+
+    def free(name):
+        if name in store.profiles:
+            raise SystemExit(f"rivalgg: a profile named {name!r} already exists")
+        return name
+
+    if action == "list":
+        for name in names:
             print(("* " if name == store.active else "  ") + name)
-        return
-    if args.action == "show":
+    elif action == "current":
+        print(store.active)
+    elif action == "show":
         import json
-        print(json.dumps(store.profiles[args.name or store.active].to_json(), indent=2))
-        return
-    if args.action == "new":
+        print(json.dumps(store.profiles[existing(args.name or store.active)].to_json(), indent=2))
+    elif action == "use":
+        _switch_to(store, existing(args.name))
+    elif action in ("next", "previous"):
+        step = 1 if action == "next" else -1
+        _switch_to(store, names[(names.index(store.active) + step) % len(names)])
+    elif action == "new":
         from copy import deepcopy
-        store.profiles[args.name] = deepcopy(store.current)
-    elif args.action == "delete":
-        if len(store.profiles) == 1:
-            raise SystemExit("cannot delete the last profile")
-        del store.profiles[args.name]
-        if store.active == args.name:
-            store.active = next(iter(store.profiles))
-    elif args.action == "use":
-        store.active = args.name
-        with device.Mouse() as m:
-            apply(store.current, m, progress=lambda msg: print(f"  {msg}"))
-    store.save()
+        store.profiles[free(args.name)] = deepcopy(store.current)
+        store.save()
+    elif action == "rename":
+        store.rename(existing(args.old), free(args.new))
+        store.save()
+    elif action == "delete":
+        store.delete(existing(args.name))
+        store.save()
+
+
+def _app_id(text):
+    return text if text.endswith(".desktop") else text + ".desktop"
+
+
+def cmd_app_profile(args):
+    from . import autoswitch
+    store = Store()
+    action = args.app_action
+    if action == "list":
+        if not store.app_profiles:
+            print("no app rules")
+        for app, name in sorted(store.app_profiles.items()):
+            print(f"{app}  ->  {name}")
+        if not autoswitch.focus_extension_running():
+            print("note: the rivalgg-focus GNOME Shell extension isn't running, "
+                  "so rules have no effect", file=sys.stderr)
+    elif action == "set":
+        if args.profile not in store.profiles:
+            raise SystemExit(f"rivalgg: no profile named {args.profile!r}")
+        store.app_profiles[_app_id(args.app)] = args.profile
+        store.save()
+    elif action == "remove":
+        if store.app_profiles.pop(_app_id(args.app), None) is None:
+            raise SystemExit(f"rivalgg: no rule for {_app_id(args.app)}")
+        store.save()
+    elif action == "focused":
+        from gi.repository import Gio, GLib
+        try:
+            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            reply = bus.call_sync(autoswitch.FOCUS_BUS_NAME, autoswitch.FOCUS_PATH,
+                                  autoswitch.FOCUS_IFACE, "GetFocusedApp", None, None,
+                                  Gio.DBusCallFlags.NONE, 2000, None)
+        except GLib.Error:
+            raise SystemExit("rivalgg: the rivalgg-focus GNOME Shell extension isn't running")
+        print(reply.unpack()[0] or "(no app)")
 
 
 def cmd_battery_warnings(args):
@@ -274,10 +333,30 @@ def main(argv=None):
                          "SteelSeries GG)")
     sp.set_defaults(func=cmd_motion, no_apply=True)
 
-    sp = sub.add_parser("profile", help="manage profiles")
-    sp.add_argument("action", choices=["list", "show", "new", "delete", "use"])
-    sp.add_argument("name", nargs="?")
+    sp = sub.add_parser("profile", help="list, switch and manage profiles")
+    psub = sp.add_subparsers(dest="profile_action", required=True)
+    psub.add_parser("list", help="all profiles; * marks the active one")
+    psub.add_parser("current", help="print the active profile")
+    psub.add_parser("show", help="print a profile as JSON").add_argument("name", nargs="?")
+    psub.add_parser("use", help="switch to a profile").add_argument("name")
+    psub.add_parser("next", help="switch to the next profile")
+    psub.add_parser("previous", help="switch to the previous profile")
+    psub.add_parser("new", help="copy the active profile").add_argument("name")
+    rp = psub.add_parser("rename", help="rename a profile")
+    rp.add_argument("old")
+    rp.add_argument("new")
+    psub.add_parser("delete", help="delete a profile").add_argument("name")
     sp.set_defaults(func=cmd_profile)
+
+    sp = sub.add_parser("app-profile", help="use a profile while an app is focused")
+    asub = sp.add_subparsers(dest="app_action", required=True)
+    asub.add_parser("list", help="show the app rules")
+    ap_set = asub.add_parser("set", help="e.g. app-profile set steam Gaming")
+    ap_set.add_argument("app", help="desktop app ID, e.g. steam or org.gnome.Nautilus")
+    ap_set.add_argument("profile")
+    asub.add_parser("remove", help="remove an app's rule").add_argument("app")
+    asub.add_parser("focused", help="print the focused app's ID (to write rules)")
+    sp.set_defaults(func=cmd_app_profile)
 
     sp = sub.add_parser("battery-warnings", help="low-battery notifications on or off")
     sp.add_argument("state", choices=["on", "off"], nargs="?")
@@ -287,8 +366,6 @@ def main(argv=None):
     sub.add_parser("events", help="print live mouse events").set_defaults(func=cmd_events)
 
     args = ap.parse_args(argv)
-    if args.command == "profile" and args.action not in ("list", "show") and not args.name:
-        ap.error("profile name required")
     try:
         args.func(args)
     except (device.DeviceError, ValueError) as e:

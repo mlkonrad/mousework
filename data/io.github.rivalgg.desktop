@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Rival 3 Wireless
+Comment=Configure your SteelSeries Rival 3 Wireless mouse
+Exec=rivalgg-gtk
+Icon=input-mouse
+Terminal=false
+Type=Application
+Categories=Settings;HardwareSettings;
+Keywords=mouse;steelseries;dpi;cpi;

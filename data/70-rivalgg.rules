@@ -1,0 +1,8 @@
+# SteelSeries Rival 3 Wireless receiver (normal and bootloader): give the
+# logged-in user access to the hidraw nodes.
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1830", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1831", TAG+="uaccess"
+
+# The mouse's evdev node (not its keyboard interface), so rivalgg-filter can
+# grab it and re-emit filtered motion through /dev/uinput.
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_MOUSE}=="1", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1830", TAG+="uaccess"

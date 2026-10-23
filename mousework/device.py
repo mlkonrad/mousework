@@ -16,6 +16,12 @@ COMMAND_GAP_S = 0.030  # §2.3
 # other's answers. Each query holds this lock from request to response.
 LOCK_PATH = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "mousework.lock")
 QUERY_TIMEOUT_S = 1.0
+# Every power write drops the radio link (firmware 1.04, measured 2026-10-23):
+# turning high efficiency on drops it at once for about 2.5 s, turning it off
+# keeps it about 1.2 s and then drops it for about 5 s.
+POWER_DROP_S = 3.0
+POWER_RELINK_S = 15.0
+LINK_POLL_S = 0.2
 
 
 class DeviceError(Exception):
@@ -227,7 +233,23 @@ class Mouse:
         return p.decode_power(self._mouse_query(p.command(p.READ | p.OP_POWER)))
 
     def set_power(self, settings):
+        """Write power settings and return once the mouse is back on its link.
+
+        Commands sent while the link is down fail, so wait for the drop that
+        every power write causes and then for the reconnect.
+        """
         self._mouse_send(p.encode_power(settings))
+        self._wait_for_link(False, POWER_DROP_S)
+        if not self._wait_for_link(True, POWER_RELINK_S):
+            raise MouseUnreachable("mouse didn't reconnect after its power settings changed")
+
+    def _wait_for_link(self, linked, timeout):
+        deadline = time.monotonic() + timeout
+        while self.linked() != linked:
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(LINK_POLL_S)
+        return True
 
     def debounce(self):
         r = self._mouse_query(p.command(p.READ | p.OP_DEBOUNCE))

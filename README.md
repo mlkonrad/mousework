@@ -71,6 +71,7 @@ To remove it: `./uninstall.sh` (add `--purge` to delete your profiles too).
 ```sh
 mousework-gtk                                  # the app
 mousework status
+mousework status --json                        # for scripts and widgets, see docs/json.md
 mousework cpi 400 800 1600 --active 800
 mousework polling 1000
 mousework power --high-efficiency off --sleep 10
@@ -84,6 +85,14 @@ mousework profile current
 mousework events                               # watch CPI button, link and battery events
 mousework battery-warnings off                 # or on
 ```
+
+### Battery level in your panel or scripts
+
+`mousework status --json` prints the battery level, connection state, CPI,
+polling rate and active profile in a stable, versioned JSON format.
+[docs/json.md](docs/json.md) documents every field and has examples for shell
+scripts, Python, Waybar, GNOME Shell, KDE Plasma and Polybar; a JSON Schema is
+in [docs/status.schema.json](docs/status.schema.json).
 
 On first run, Mousework imports what the mouse can report (CPI, polling, power
 settings). Button mappings and lighting have no read-back, so they stay as

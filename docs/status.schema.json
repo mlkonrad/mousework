@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mlkonrad/mousework/blob/main/docs/status.schema.json",
+  "title": "Mousework status, format version 1",
+  "description": "Output of `mousework status --json`. See docs/json.md. Later releases may add properties; consumers must ignore properties they don't know.",
+  "type": "object",
+  "required": ["version", "device", "connection", "error", "battery", "firmware",
+               "cpi", "polling_hz", "power", "profile"],
+  "additionalProperties": true,
+  "properties": {
+    "version": {
+      "description": "Format version. Changes only when an existing field is renamed, removed or changes meaning.",
+      "const": 1
+    },
+    "device": {
+      "description": "Name of the supported mouse.",
+      "type": "string"
+    },
+    "connection": {
+      "description": "How the mouse is reachable right now.",
+      "enum": ["receiver", "bluetooth", "asleep", "no-receiver", "no-access", "no-response"]
+    },
+    "error": {
+      "description": "Human-readable detail when something went wrong, otherwise null. For display or logs only; don't parse it.",
+      "type": ["string", "null"]
+    },
+    "battery": {
+      "description": "Null unless connection is \"receiver\" and the mouse reported a level.",
+      "type": ["object", "null"],
+      "required": ["level", "state"],
+      "additionalProperties": true,
+      "properties": {
+        "level": {"type": "integer", "minimum": 0, "maximum": 100},
+        "state": {"enum": ["discharging", "charging", "charged"]}
+      }
+    },
+    "firmware": {
+      "type": "object",
+      "required": ["mouse", "receiver"],
+      "additionalProperties": true,
+      "properties": {
+        "mouse": {"type": ["string", "null"], "pattern": "^[0-9]+\\.[0-9]{2}$"},
+        "receiver": {"type": ["string", "null"], "pattern": "^[0-9]+\\.[0-9]{2}$"}
+      }
+    },
+    "cpi": {
+      "description": "Null unless connection is \"receiver\".",
+      "type": ["object", "null"],
+      "required": ["presets", "active", "active_index"],
+      "additionalProperties": true,
+      "properties": {
+        "presets": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {"type": "integer", "minimum": 100, "maximum": 18000}
+        },
+        "active": {"type": "integer", "minimum": 100, "maximum": 18000},
+        "active_index": {"type": "integer", "minimum": 1, "maximum": 5}
+      }
+    },
+    "polling_hz": {
+      "description": "Null unless connection is \"receiver\" (and also when the mouse reports an unknown rate).",
+      "enum": [125, 250, 500, 1000, null]
+    },
+    "power": {
+      "description": "Null unless connection is \"receiver\".",
+      "type": ["object", "null"],
+      "required": ["high_efficiency", "smart_illumination", "sleep_minutes"],
+      "additionalProperties": true,
+      "properties": {
+        "high_efficiency": {"type": "boolean"},
+        "smart_illumination": {"type": "boolean"},
+        "sleep_minutes": {"type": "integer", "minimum": 1, "maximum": 20}
+      }
+    },
+    "profile": {
+      "description": "From ~/.config/mousework/profiles.json, independent of the connection. Null if that file can't be read.",
+      "type": ["object", "null"],
+      "required": ["active", "saved_to_mouse"],
+      "additionalProperties": true,
+      "properties": {
+        "active": {"type": "string"},
+        "saved_to_mouse": {"type": "boolean"}
+      }
+    }
+  }
+}

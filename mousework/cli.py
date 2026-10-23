@@ -23,6 +23,11 @@ def _stop(text):
 
 
 def cmd_status(args):
+    if args.json:
+        import json
+        from . import status
+        print(json.dumps(status.collect(), indent=2))
+        return
     with device.Mouse() as m:
         radio = m.radio_status()
         print(f"Receiver firmware: {m.receiver_version()}")
@@ -268,7 +273,11 @@ def main(argv=None):
         sp.add_argument("--no-apply", action="store_true", help="only save the profile")
         return sp
 
-    sub.add_parser("status", help="show device state").set_defaults(func=cmd_status)
+    sp = sub.add_parser("status", help="show device state")
+    sp.add_argument("--json", action="store_true",
+                    help="machine-readable output for scripts and desktop widgets "
+                         "(format: docs/json.md)")
+    sp.set_defaults(func=cmd_status)
 
     sp = editing("cpi", help="set CPI presets")
     sp.add_argument("presets", type=int, nargs="+", help="1-5 values, 100-18000")

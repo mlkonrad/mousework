@@ -163,12 +163,15 @@ class Mouse:
 
     def query(self, payload, timeout=QUERY_TIMEOUT_S):
         with self._exclusive():
-            self._drain()
-            self._write(payload)
-            ready, _, _ = select.select([self.fd], [], [], timeout)
-            if not ready:
-                raise MouseUnreachable("no response from device")
-            return os.read(self.fd, p.REPORT_LEN)
+            try:
+                self._drain()
+                self._write(payload)
+                ready, _, _ = select.select([self.fd], [], [], timeout)
+                if not ready:
+                    raise MouseUnreachable("no response from device")
+                return os.read(self.fd, p.REPORT_LEN)
+            except OSError as e:  # EIO while the receiver resets or is unplugged
+                raise DeviceError(f"read failed: {e}") from e
 
     # --- receiver ---
 

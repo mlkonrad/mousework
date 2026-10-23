@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <enum id="org.gnome.shell.extensions.mousework.panel-icon">
+    <value nick="battery" value="0"/>
+    <value nick="mouse" value="1"/>
+    <value nick="none" value="2"/>
+  </enum>
+  <schema id="org.gnome.shell.extensions.mousework" path="/org/gnome/shell/extensions/mousework/">
+    <key name="panel-icon" enum="org.gnome.shell.extensions.mousework.panel-icon">
+      <default>'battery'</default>
+      <summary>Icon shown in the top bar</summary>
+    </key>
+    <key name="show-battery" type="b">
+      <default>true</default>
+      <summary>Show the battery percentage in the top bar</summary>
+    </key>
+    <key name="show-dpi" type="b">
+      <default>false</default>
+      <summary>Show the active DPI in the top bar</summary>
+    </key>
+    <key name="show-polling-rate" type="b">
+      <default>false</default>
+      <summary>Show the polling rate in the top bar</summary>
+    </key>
+    <key name="show-profile" type="b">
+      <default>false</default>
+      <summary>Show the active profile in the top bar</summary>
+    </key>
+  </schema>
+</schemalist>

@@ -94,6 +94,26 @@ polling rate and active profile in a stable, versioned JSON format.
 scripts, Python, Waybar, GNOME Shell, KDE Plasma and Polybar; a JSON Schema is
 in [docs/status.schema.json](docs/status.schema.json).
 
+### Top-bar indicator for GNOME Shell
+
+`gnome-shell-extension/` is a small GNOME Shell extension (Shell 49 and 50)
+built on `mousework status --json`. While the mouse is connected through its
+USB receiver, it shows an icon in the top bar (dimmed while the mouse is
+asleep), and its menu lists the battery level, DPI, polling rate and profile.
+In its settings you choose the icon (battery level, mouse or none) and what
+appears next to it: the battery percentage, DPI, polling rate and profile. It
+updates as soon as `mousework-filter` reports a change (the CPI button, the
+mouse waking or sleeping, a new battery level, a setting or profile changed in
+the app or with the CLI), and otherwise every two minutes and whenever you
+open the menu.
+
+```sh
+glib-compile-schemas gnome-shell-extension/schemas
+ln -s "$PWD/gnome-shell-extension" ~/.local/share/gnome-shell/extensions/mousework@mlkonrad.github.com
+# log out and back in, then:
+gnome-extensions enable mousework@mlkonrad.github.com
+```
+
 On first run, Mousework imports what the mouse can report (CPI, polling, power
 settings). Button mappings and lighting have no read-back, so they stay as
 they are on the mouse until you change them.

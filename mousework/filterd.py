@@ -16,7 +16,7 @@ import time
 import evdev
 from evdev import ecodes as e
 
-from . import battery, device
+from . import battery, changes, device
 from . import protocol as p
 from .motion import MotionFilter
 from .profiles import CONFIG_FILE, Store
@@ -26,6 +26,7 @@ TRACE_PATH = os.environ.get("MOUSEWORK_TRACE")  # per-report CSV for diagnosis
 CONFIG_CHECK_S = 1.0
 RETRY_S = 3.0
 BATTERY_POLL_S = 300
+CHANGE_EVENTS = {p.EVENT_CPI_CHANGED: "cpi", p.EVENT_LINK: "link", p.EVENT_BATTERY: "battery"}
 
 
 def log(message):
@@ -108,6 +109,20 @@ class Service:
         self.settings.on_event(code, value, raw)
         if code == p.EVENT_BATTERY:  # §2.4
             self.battery_level(value)
+        if code in CHANGE_EVENTS:
+            self.changed(CHANGE_EVENTS[code])
+
+    def changed(self, what):
+        try:
+            changes.emit(what)
+        except Exception as err:  # no session bus; widgets fall back to polling
+            debug(f"change signal failed: {err}")
+
+    def refresh_settings(self):
+        if not self.settings.refresh():
+            return False
+        self.changed("settings")
+        return True
 
     def battery_level(self, level):
         if not self.settings.battery_warnings:
@@ -143,7 +158,7 @@ class Service:
     def run(self):
         threading.Thread(target=self._watch_device, daemon=True).start()
         while self.running:
-            self.settings.refresh()
+            self.refresh_settings()
             if not any(self.settings.levels):
                 time.sleep(CONFIG_CHECK_S)
                 continue
@@ -200,7 +215,7 @@ class Service:
         while self.running:
             if time.monotonic() - last_check >= CONFIG_CHECK_S:
                 last_check = time.monotonic()
-                if self.settings.refresh():
+                if self.refresh_settings():
                     debug("settings changed")
                     if any(self.settings.levels):
                         motion = self._make_motion()

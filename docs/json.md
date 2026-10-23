@@ -22,8 +22,9 @@ Contents:
 4. [Connection states](#connection-states)
 5. [Exit status](#exit-status)
 6. [How often to call it](#how-often-to-call-it)
-7. [Compatibility](#compatibility)
-8. [Examples](#examples): shell, Python, Waybar, GNOME Shell, KDE Plasma, Polybar and others
+7. [Change notifications](#change-notifications)
+8. [Compatibility](#compatibility)
+9. [Examples](#examples): shell, Python, Waybar, GNOME Shell, KDE Plasma, Polybar and others
 
 ## Quick start
 
@@ -184,6 +185,48 @@ usually takes well under a second, but plan for more:
 
 `mousework status --json` only reads. It never changes settings and never
 writes to the mouse's memory.
+
+## Change notifications
+
+To update right away instead of on your next poll, listen on the session bus
+for this signal:
+
+| | |
+|---|---|
+| Interface | `io.github.mlkonrad.Mousework` |
+| Signal | `Changed (s what)` |
+| Object path | `/io/github/mlkonrad/Mousework` |
+
+When the signal arrives, call `mousework status --json` again. `what` says
+what happened, as a hint only (more values may be added):
+
+| `what` | Sent when |
+|---|---|
+| `cpi` | The CPI button on the mouse switched presets. |
+| `link` | The mouse woke up, went to sleep or lost its link to the receiver. |
+| `battery` | The mouse reported a new battery level. |
+| `settings` | Profiles or settings changed, from the app, the command line or by editing `~/.config/mousework/profiles.json`. Also sent once when the service starts. |
+
+Wait about a second after the last signal before you read the status. A
+setting is saved before it is written to the mouse, and changes often come in
+bursts, so this reads the new values once instead of several times.
+
+The signal comes from the `mousework-filter` service. It is a broadcast, so
+the sender has no well-known bus name; match on interface, member and path.
+If the service isn't running, no signals arrive, so keep polling as well, at
+the slower end of the range above.
+
+```sh
+dbus-monitor --session "type='signal',interface='io.github.mlkonrad.Mousework'"
+```
+
+In GJS:
+
+```js
+const id = Gio.DBus.session.signal_subscribe(null, 'io.github.mlkonrad.Mousework', 'Changed',
+    '/io/github/mlkonrad/Mousework', null, Gio.DBusSignalFlags.NONE, () => scheduleRefresh());
+// later: Gio.DBus.session.signal_unsubscribe(id);
+```
 
 ## Compatibility
 

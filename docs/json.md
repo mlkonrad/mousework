@@ -110,8 +110,10 @@ The mouse connected through its USB receiver:
   },
   "profile": {
     "active": "Gaming",
-    "saved_to_mouse": true
-  }
+    "saved_to_mouse": true,
+    "available": ["Default", "Gaming"]
+  },
+  "syncing": null
 }
 ```
 
@@ -133,8 +135,10 @@ The receiver is plugged in, but the mouse is asleep:
   "power": null,
   "profile": {
     "active": "Gaming",
-    "saved_to_mouse": true
-  }
+    "saved_to_mouse": true,
+    "available": ["Default", "Gaming"]
+  },
+  "syncing": null
 }
 ```
 
@@ -167,12 +171,16 @@ over several lines.)
 | `power.sleep_minutes` | integer, 1–20 | Minutes without use before the mouse goes to sleep. |
 | `profile` | object or null | The active Mousework profile. Read from `~/.config/mousework/profiles.json`, so it is available whatever the connection. `null` only if that file can't be read. |
 | `profile.active` | string | Name of the active profile, as shown by `mousework profile current`. Before the first profile is created it is `"Default"`. |
+| `profile.available` | array of strings | Names of all profiles, including the active one, in the order the app lists them and `mousework profile next` cycles through them. Switch with `mousework profile use NAME`. |
+| `syncing` | object or null | Not `null` while Mousework writes settings to the mouse: a profile switch, a setting changed in the app or with the command line. See [Syncing](#syncing). |
+| `syncing.profile` | string or null | The profile being written, or `null` if Mousework doesn't say. |
 | `profile.saved_to_mouse` | boolean | `false` after a temporary switch (`mousework profile use NAME --temporary`): the mouse has the profile's settings now, but it will start with a different, saved profile after it's switched off and on. `true` otherwise. |
 
 Rules that hold for every state:
 
 - `battery`, `cpi`, `polling_hz` and `power` are only filled in when
   `connection` is `receiver`. In every other state they are `null`.
+- `profile` and `syncing` don't depend on the connection.
 - Even with `connection` set to `receiver`, `battery` is `null` if the mouse
   didn't report a level, and `polling_hz` is `null` if it reported a rate
   Mousework doesn't know.
@@ -194,6 +202,30 @@ Rules that hold for every state:
 Handle unknown values: if `connection` is something your code doesn't know, a
 newer Mousework added a state. Treat it like `no-receiver` and show nothing,
 rather than failing.
+
+### Syncing
+
+Changing the mouse's power settings (high efficiency, smart illumination,
+sleep timer) makes it drop its link to the receiver for a few seconds and then
+reconnect by itself. Turning high efficiency on drops it at once for about
+2.5 s; turning it off keeps it about 1.2 s and then drops it for about 5 s.
+Profile switches often change power settings, so they cause this too.
+
+While Mousework writes settings, `syncing` is set, and the writing process
+sends the [`Changed` signal](#change-notifications) with `what` = `syncing`
+when it starts and when it ends. During the drop, `connection` reads `asleep`,
+truthfully, but `syncing` tells you why, so show "syncing" (GNOME's extension
+spins a sync icon) instead of "asleep":
+
+```json
+{
+  "connection": "asleep",
+  "syncing": {"profile": "Gaming"}
+}
+```
+
+A switch takes about 3 to 10 seconds. `syncing` is reported only while the
+writing process is alive, so a crash can't leave it stuck.
 
 ## Exit status
 
@@ -267,6 +299,7 @@ what happened, as a hint only (more values may be added):
 | `cpi` | The CPI button on the mouse switched presets. |
 | `link` | The mouse woke up, went to sleep or lost its link to the receiver. |
 | `battery` | The mouse reported a new battery level. |
+| `syncing` | Mousework started or finished writing settings to the mouse; see `syncing` in the status. |
 | `settings` | Profiles or settings changed, from the app, the command line or by editing `~/.config/mousework/profiles.json`. Also sent once when the service starts. |
 
 Wait about a second after the last signal before you read the status. A
@@ -340,8 +373,10 @@ a good integration does:
 4. **Trust only exit status `0` and `version` `1`.** Anything else means
    "unknown": show nothing or a question mark, and try again later. With
    `--follow`, each line is one complete JSON object.
-5. **Start from `connection`.** Show the details only for `receiver`, show a
-   dimmed or "asleep" state for `asleep`, and hide for `no-receiver`. Treat a
+5. **Start from `syncing`, then `connection`.** While `syncing` isn't `null`,
+   show that the mouse is syncing, whatever `connection` says. Otherwise show
+   the details only for `receiver`, show a dimmed or "asleep" state for
+   `asleep`, and hide for `no-receiver`. Treat a
    value you don't know like `no-receiver`. Show `error` in a tooltip, but
    don't parse it.
 6. **Expect `null`.** Even while connected, `battery`, `polling_hz` and the

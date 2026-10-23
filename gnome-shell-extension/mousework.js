@@ -8,10 +8,7 @@ import GLib from 'gi://GLib';
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 
 // GNOME Shell's PATH usually doesn't include ~/.local/bin.
-const COMMAND = [
-    GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'mousework']),
-    'status', '--json',
-];
+const MOUSEWORK = GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'mousework']);
 
 const TIMEOUT_S = 10;
 
@@ -22,7 +19,7 @@ const TIMEOUT_S = 10;
  * @returns {Promise<object|null>} the status object, or null if it couldn't be read
  */
 export async function readStatus(cancellable) {
-    const proc = Gio.Subprocess.new(COMMAND,
+    const proc = Gio.Subprocess.new([MOUSEWORK, 'status', '--json'],
         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
     let timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, TIMEOUT_S, () => {
         timeoutId = 0;
@@ -45,6 +42,23 @@ export async function readStatus(cancellable) {
         if (timeoutId)
             GLib.Source.remove(timeoutId);
     }
+}
+
+/**
+ * Make a profile the active one: `mousework profile use NAME` writes it to the
+ * mouse and saves it there, which takes a few seconds. Cancelling stops waiting
+ * but lets the write finish, so the mouse is never left half configured.
+ *
+ * @param {string} name a name from the status's `profile.available`
+ * @param {Gio.Cancellable} cancellable stops waiting; it then throws CANCELLED
+ * @throws {Error} with Mousework's explanation if the switch failed
+ */
+export async function switchProfile(name, cancellable) {
+    const proc = Gio.Subprocess.new([MOUSEWORK, 'profile', 'use', name],
+        Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_PIPE);
+    const [, stderr] = await proc.communicate_utf8_async(null, cancellable);
+    if (!proc.get_successful())
+        throw new Error(stderr.trim().replace(/^mousework: /, '') || `mousework exited with status ${proc.get_exit_status()}`);
 }
 
 /**

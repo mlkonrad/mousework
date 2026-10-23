@@ -5,7 +5,7 @@ are never renamed, removed or given a different type without bumping
 FORMAT_VERSION.
 """
 
-from . import device
+from . import device, sync
 from . import protocol as p
 from .profiles import Store
 
@@ -27,10 +27,11 @@ def _profile(store_factory):
         store = store_factory()
     except (OSError, ValueError, KeyError):  # unreadable or damaged profiles.json
         return None
-    return {"active": store.active, "saved_to_mouse": not store.mouse_may_differ}
+    return {"active": store.active, "saved_to_mouse": not store.mouse_may_differ,
+            "available": list(store.profiles)}
 
 
-def _skeleton(profile):
+def _skeleton(profile, syncing):
     return {
         "version": FORMAT_VERSION,
         "device": DEVICE_NAME,
@@ -42,14 +43,16 @@ def _skeleton(profile):
         "polling_hz": None,
         "power": None,
         "profile": profile,
+        "syncing": syncing,
     }
 
 
 def collect(mouse_factory=device.Mouse, bluetooth_present=device.bluetooth_present,
-            store_factory=Store):
+            store_factory=Store, syncing=sync.current):
     """Return the status dict. Never raises for device states."""
     profile = _profile(store_factory)
-    status = _skeleton(profile)
+    syncing = syncing()
+    status = _skeleton(profile, syncing)
     try:
         mouse = mouse_factory()
     except device.NotFound:
@@ -63,7 +66,7 @@ def collect(mouse_factory=device.Mouse, bluetooth_present=device.bluetooth_prese
     try:
         _read(mouse, status, bluetooth_present)
     except device.DeviceError as err:  # unplugged or reset mid-query
-        status = _skeleton(profile)
+        status = _skeleton(profile, syncing)
         status["connection"] = CONNECTION_NO_RECEIVER
         status["error"] = str(err)
     finally:

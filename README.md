@@ -103,13 +103,22 @@ Shell, KDE Plasma, Xfce, Polybar and i3blocks; a JSON Schema is in
 `gnome-shell-extension/` is a small GNOME Shell extension (Shell 49 and 50)
 built on `mousework status --json`. While the mouse is connected through its
 USB receiver, it shows an icon in the top bar (dimmed while the mouse is
-asleep), and its menu lists the battery level, DPI, polling rate and profile.
+asleep, and spinning a sync icon while settings are written to the mouse),
+and its menu lists the battery level, DPI and polling rate, and switches
+between your profiles with a click.
 In its settings you choose the icon (battery level, mouse or none) and what
 appears next to it: the battery percentage, DPI, polling rate and profile. It
 updates as soon as `mousework-filter` reports a change (the CPI button, the
 mouse waking or sleeping, a new battery level, a setting or profile changed in
 the app or with the CLI), and otherwise every two minutes and whenever you
 open the menu.
+
+Switching to a profile with different power settings makes the mouse drop its
+link to the receiver for a few seconds while it syncs. The indicator shows a
+sync icon during that time instead of an asleep mouse. The icon follows
+GNOME's animation setting: it spins normally, and stands still when Settings →
+Accessibility → Reduce Animation is on (or when another extension, such as Just
+Perfection, turns animations off).
 
 On GNOME, `install.sh` checks that your GNOME Shell version can run it and
 asks whether to install it (with `--dev` it links to the checkout, like the

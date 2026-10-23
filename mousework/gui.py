@@ -11,7 +11,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from . import device  # noqa: E402
+from . import device, sync  # noqa: E402
 from . import protocol as p  # noqa: E402
 from .profiles import (Profile, Store, apply, import_from_device, reconcile, resend_volatile,
                        set_polling_if_needed)  # noqa: E402
@@ -560,8 +560,13 @@ class Window(Adw.ApplicationWindow):
         if not dirty:
             return False  # motion settings are host-side; the service reloads them
         profile = copy.deepcopy(self.profile)
+        name = self.store.active
 
         def work():
+            with sync.syncing(name):
+                write()
+
+        def write():
             m = self.mouse
             profile.validate()
             if "power" in dirty:
@@ -604,11 +609,15 @@ class Window(Adw.ApplicationWindow):
         if not self.mouse or not self.linked:
             return
         profile = copy.deepcopy(self.profile)
+        name = self.store.active
         def done(_):
             self._saved_to_flash()
             self._toast("Profile applied")
-        self.worker.run(lambda: apply(profile, self.mouse), done=done,
-                        error=self._device_error)
+
+        def work():
+            with sync.syncing(name):
+                apply(profile, self.mouse)
+        self.worker.run(work, done=done, error=self._device_error)
 
     def _ask_name(self, heading, initial, on_ok):
         dialog = Adw.AlertDialog(heading=heading)
@@ -698,7 +707,8 @@ class Window(Adw.ApplicationWindow):
                 # Only once: if a write drops the link, the next reconnect
                 # must not write again, or the mouse never stays connected.
                 self._reconciled = True
-                reconcile(copy.deepcopy(self.profile), m)
+                with sync.syncing(self.store.active):
+                    reconcile(copy.deepcopy(self.profile), m)
                 state["cpi"] = m.cpi_table()
             elif on_connect or not self.linked:
                 resend_volatile(self.profile, m)  # §7.2

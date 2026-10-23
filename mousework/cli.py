@@ -5,7 +5,7 @@ import os
 import sys
 import time
 
-from . import device
+from . import device, sync
 from . import protocol as p
 from .profiles import (Store, apply, apply_changes, import_from_device, set_polling_if_needed,
                        set_power_if_needed)
@@ -97,7 +97,7 @@ def _edit_profile(args, change, write):
     store.save()
     if args.no_apply or (args.profile and args.profile != store.active):
         return
-    with device.Mouse() as m:
+    with sync.syncing(args.profile or store.active), device.Mouse() as m:
         write(m, profile)
         m.save_to_flash()
     if profile is store.current:
@@ -191,7 +191,7 @@ def _switch_to(store, name, temporary=False):
     """Write the profile to the mouse first, then record it as active, so a
     failed write (mouse asleep) leaves the store unchanged."""
     target = store.profiles[name]
-    with device.Mouse() as m:
+    with sync.syncing(name), device.Mouse() as m:
         if temporary:
             apply_changes(target, store.current, m)
         else:

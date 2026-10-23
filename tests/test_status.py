@@ -98,14 +98,15 @@ class FakeMouse:
 class FakeStore:
     active = "Gaming"
     mouse_may_differ = False
+    profiles = {"Default": None, "Gaming": None}
 
 
-def collect(mouse=None, error=None, bluetooth=False, store=FakeStore):
+def collect(mouse=None, error=None, bluetooth=False, store=FakeStore, syncing=lambda: None):
     def factory():
         if error:
             raise error
         return mouse
-    return status.collect(factory, lambda: bluetooth, store)
+    return status.collect(factory, lambda: bluetooth, store, syncing)
 
 
 class CollectTests(unittest.TestCase):
@@ -129,7 +130,8 @@ class CollectTests(unittest.TestCase):
             "polling_hz": 1000,
             "power": {"high_efficiency": False, "smart_illumination": True,
                       "sleep_minutes": 10},
-            "profile": {"active": "Gaming", "saved_to_mouse": True},
+            "profile": {"active": "Gaming", "saved_to_mouse": True, "available": ["Default", "Gaming"]},
+        "syncing": None,
         })
         self.assertTrue(mouse.closed)
 
@@ -207,7 +209,8 @@ class CollectTests(unittest.TestCase):
         class Temporary(FakeStore):
             mouse_may_differ = True
         result = collect(FakeMouse(), store=Temporary)
-        self.assertEqual(result["profile"], {"active": "Gaming", "saved_to_mouse": False})
+        self.assertEqual(result["profile"], {"active": "Gaming", "saved_to_mouse": False,
+                                             "available": ["Default", "Gaming"]})
 
     def test_damaged_store(self):
         def broken():

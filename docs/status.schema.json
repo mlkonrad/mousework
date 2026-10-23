@@ -5,7 +5,7 @@
   "description": "Output of `mousework status --json`. See docs/json.md. Later releases may add properties; consumers must ignore properties they don't know.",
   "type": "object",
   "required": ["version", "device", "connection", "error", "battery", "firmware",
-               "cpi", "polling_hz", "power", "profile"],
+               "cpi", "polling_hz", "power", "profile", "syncing"],
   "additionalProperties": true,
   "properties": {
     "version": {
@@ -77,11 +77,26 @@
     "profile": {
       "description": "From ~/.config/mousework/profiles.json, independent of the connection. Null if that file can't be read.",
       "type": ["object", "null"],
-      "required": ["active", "saved_to_mouse"],
+      "required": ["active", "saved_to_mouse", "available"],
       "additionalProperties": true,
       "properties": {
         "active": {"type": "string"},
-        "saved_to_mouse": {"type": "boolean"}
+        "saved_to_mouse": {"type": "boolean"},
+        "available": {
+          "description": "Names of all profiles, in the order the app and `mousework profile next` use; includes active.",
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "syncing": {
+      "description": "Non-null while Mousework writes settings to the mouse, whatever the connection. A write that changes power settings makes the mouse drop its link for a few seconds, so connection can read \"asleep\" meanwhile.",
+      "type": ["object", "null"],
+      "required": ["profile"],
+      "additionalProperties": true,
+      "properties": {
+        "profile": {"type": ["string", "null"]}
       }
     }
   }

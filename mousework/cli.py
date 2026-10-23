@@ -1,6 +1,7 @@
 """mousework command-line interface."""
 
 import argparse
+import os
 import sys
 import time
 
@@ -25,10 +26,11 @@ def _stop(text):
 
 def cmd_status(args):
     if args.json:
-        import json
-        from . import status
-        print(json.dumps(status.collect(), indent=2))
+        _status_json(args)
         return
+    if args.follow or args.wait:
+        print("mousework: --follow and --wait need --json", file=sys.stderr)
+        sys.exit(2)
     with device.Mouse() as m:
         radio = m.radio_status()
         print(f"Receiver firmware: {m.receiver_version()}")
@@ -47,6 +49,34 @@ def cmd_status(args):
         print(f"High efficiency:   {'on' if power.high_efficiency else 'off'}")
         print(f"Smart illumination:{' on' if power.smart_illumination else ' off'}")
         print(f"Sleep timer:       {power.idle_sleep_s // 60} min")
+
+
+def _status_json(args):
+    import json
+    from . import changes, status
+
+    def show(indent):
+        try:
+            print(json.dumps(status.collect(), indent=indent), flush=True)
+        except BrokenPipeError:  # the reader went away; don't fail again at exit
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+            return False
+        return True
+
+    def show_once():
+        show(2)
+        return False
+
+    try:
+        if args.follow:
+            if show(None):
+                changes.watch(lambda: show(None))
+        elif args.wait:
+            changes.watch(show_once)
+        else:
+            show(2)
+    except KeyboardInterrupt:
+        pass
 
 
 def _write_buttons(m, pr):
@@ -271,6 +301,11 @@ def main(argv=None):
     sp.add_argument("--json", action="store_true",
                     help="machine-readable output for scripts and desktop widgets "
                          "(format: docs/json.md)")
+    mode = sp.add_mutually_exclusive_group()
+    mode.add_argument("--follow", action="store_true",
+                      help="with --json: print one line now and another after every change")
+    mode.add_argument("--wait", action="store_true",
+                      help="with --json: wait for the next change (at most 2 minutes), then print")
     sp.set_defaults(func=cmd_status)
 
     sp = editing("cpi", help="set CPI presets")

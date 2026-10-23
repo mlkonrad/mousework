@@ -72,6 +72,7 @@ To remove it: `./uninstall.sh` (add `--purge` to delete your profiles too).
 mousework-gtk                                  # the app
 mousework status
 mousework status --json                        # for scripts and widgets, see docs/json.md
+mousework status --json --follow               # one line now and after every change
 mousework cpi 400 800 1600 --active 800
 mousework polling 1000
 mousework power --high-efficiency off --sleep 10
@@ -90,9 +91,11 @@ mousework battery-warnings off                 # or on
 
 `mousework status --json` prints the battery level, connection state, CPI,
 polling rate and active profile in a stable, versioned JSON format.
-[docs/json.md](docs/json.md) documents every field and has examples for shell
-scripts, Python, Waybar, GNOME Shell, KDE Plasma and Polybar; a JSON Schema is
-in [docs/status.schema.json](docs/status.schema.json).
+`--follow` prints a new line whenever something changes, so panels update
+live without polling. [docs/json.md](docs/json.md) documents every field and
+has examples for shell scripts, Python, Waybar (Omarchy, Hyprland, Sway), GNOME
+Shell, KDE Plasma, Xfce, Polybar and i3blocks; a JSON Schema is in
+[docs/status.schema.json](docs/status.schema.json).
 
 ### Top-bar indicator for GNOME Shell
 

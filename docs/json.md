@@ -17,14 +17,17 @@ shell scripts, or your own programs.
 Contents:
 
 1. [Quick start](#quick-start)
-2. [Example output](#example-output)
-3. [Fields](#fields)
-4. [Connection states](#connection-states)
-5. [Exit status](#exit-status)
-6. [How often to call it](#how-often-to-call-it)
-7. [Change notifications](#change-notifications)
-8. [Compatibility](#compatibility)
-9. [Examples](#examples): shell, Python, Waybar, GNOME Shell, KDE Plasma, Polybar and others
+2. [How it works](#how-it-works)
+3. [Example output](#example-output)
+4. [Fields](#fields)
+5. [Connection states](#connection-states)
+6. [Exit status](#exit-status)
+7. [How often to call it](#how-often-to-call-it)
+8. [Change notifications](#change-notifications)
+9. [Compatibility](#compatibility)
+10. [Writing your own integration](#writing-your-own-integration)
+11. [Examples](#examples): shell, Python, Waybar (Omarchy, Hyprland, Sway), GNOME Shell,
+    KDE Plasma, Xfce, Polybar, i3blocks and others
 
 ## Quick start
 
@@ -36,6 +39,45 @@ mousework status --json | jq '.battery.level'        # 62, or null if unknown
 Mousework installs its commands in `~/.local/bin`. Desktop shells don't always
 have that directory in their `PATH` (GNOME Shell on Fedora doesn't), so from
 an extension or widget call it by its full path: `~/.local/bin/mousework`.
+
+## How it works
+
+Three pieces are involved. Your integration only ever talks to the first two.
+
+```text
+ mouse ))) USB receiver ──── hidraw ───┬──> mousework status --json ──> JSON on stdout
+                                       │       (reads the receiver and
+ ~/.config/mousework/profiles.json ────┤        profiles.json, then exits)
+                                       │
+                                       └──> mousework-filter (systemd user service)
+                                              watches hardware events and profiles.json
+                                              └──> D-Bus signal "Changed" on the session bus
+```
+
+1. **`mousework status --json`** answers the question "what is the state right
+   now?". Each call opens the receiver, asks the receiver and the mouse a few
+   short questions, reads the active profile from
+   `~/.config/mousework/profiles.json`, prints one JSON object and exits. It
+   only reads: it never changes a setting.
+2. **The `Changed` signal** answers "when should I ask again?". The
+   `mousework-filter` service, which `install.sh` sets up and starts at login,
+   is always running anyway (it applies the motion filter and sends low-battery
+   notifications). It hears the mouse's own events (the CPI button, the mouse
+   waking up or going to sleep, battery reports) and notices when
+   `profiles.json` changes, which is what happens whenever the app or the
+   command line changes a setting or switches profiles. For each of these it
+   broadcasts `io.github.mlkonrad.Mousework.Changed` on the session bus. The
+   signal carries no state, only a hint about what happened: always read the
+   state with `mousework status --json`.
+3. **`--follow` and `--wait`** combine the two, for tools that can't use D-Bus:
+   they listen for the signal themselves and print a fresh status after each
+   change.
+
+So an integration is always: read the status once at start, then read it again
+whenever a change is announced, with a slow poll in case the service isn't
+running. The JSON format and the signal are the stable interface; everything
+else (the receiver protocol, the profile file's layout, the service's
+internals) can change between releases.
 
 ## Example output
 
@@ -158,7 +200,7 @@ rather than failing.
 | Exit status | Meaning |
 |---|---|
 | `0` | Valid JSON was printed on standard output. **This includes every connection state**, even `no-receiver`. |
-| `2` | The command line was wrong, for example an old Mousework that doesn't know `--json` yet. Nothing was printed on standard output. |
+| `2` | The command line was wrong, for example an old Mousework that doesn't know `--json` yet, or `--follow` without `--json`. Nothing was printed on standard output. |
 | anything else | An unexpected failure (a bug, or a broken installation). Standard output may be empty or incomplete; a message is on standard error. |
 
 So the rule for your code is: if the exit status isn't `0`, or the output
@@ -179,6 +221,8 @@ usually takes well under a second, but plan for more:
 - **Poll every 1 to 5 minutes for the battery.** The level changes slowly.
   Mousework's own background service checks it every 5 minutes. Polling more
   often than every 10 seconds gains nothing.
+- **Or don't poll at all**: `--follow` and `--wait` print when something
+  changes (see [Change notifications](#change-notifications)).
 - **Calling it while the Mousework app or service is running is safe.** All
   Mousework processes take turns on the receiver, so they never read each
   other's answers.
@@ -188,8 +232,26 @@ writes to the mouse's memory.
 
 ## Change notifications
 
-To update right away instead of on your next poll, listen on the session bus
-for this signal:
+Your widget can update as soon as something changes (the CPI button, the mouse
+waking up or going to sleep, a new battery level, a setting or profile changed
+in the app or with the command line) instead of on its next poll.
+
+The easiest way is to let Mousework do the waiting:
+
+- **`mousework status --json --follow`** prints the status right away as one
+  line of JSON, then another line after every change, and at least every two
+  minutes. It runs until you stop it or stop reading its output. Use it with
+  anything that reads a command's output line by line: Waybar, Polybar,
+  i3blocks, a `while read` loop, a pipe in your own program.
+- **`mousework status --json --wait`** waits for the next change (at most two
+  minutes), prints the status once, formatted like plain `--json`, and exits.
+  Use it with tools that run a command and wait for it to finish, such as a
+  KDE Plasma widget: start it again each time it returns.
+
+Changes are announced by the `mousework-filter` service. If it isn't running,
+both options still print every two minutes.
+
+To listen yourself, subscribe to this signal on the session bus:
 
 | | |
 |---|---|
@@ -239,6 +301,9 @@ The format is versioned by the `version` field. Within version 1:
 - **New values may appear** in `connection` and `battery.state`. Handle values
   you don't know as described above.
 - `error` is free text and may change in any release.
+- **The `Changed` signal** keeps its interface, object path and `(s)`
+  argument, and `--follow` and `--wait` keep their behaviour. New values of
+  `what` may appear; ignore them or treat them as "something changed".
 
 If a change ever has to break one of these rules, `version` becomes `2`.
 Check it before you use the rest:
@@ -250,11 +315,77 @@ if (status.version !== 1) { /* show "unknown": written for version 1 */ }
 `mousework status` without `--json` prints text for people. Its layout may
 change at any time, so don't parse it.
 
+## Writing your own integration
+
+The examples below cover the common desktops. For anything else, this is what
+a good integration does:
+
+1. **Pick how to learn about changes**, from best to simplest:
+   - Your program can use D-Bus (a GNOME Shell extension, a Qt or GTK app,
+     Python with Gio or dbus-next): read the status once, then subscribe to
+     the [`Changed` signal](#change-notifications) and read it again about a
+     second after the last signal.
+   - Your tool reads a command's output line by line (Waybar, Polybar,
+     i3blocks, a pipe): run `mousework status --json --follow` and handle each
+     line as a complete status.
+   - Your tool runs a command and waits for it to end (KDE Plasma's executable
+     data engine, many applet frameworks): run `mousework status --json` once,
+     then `mousework status --json --wait` again each time it returns.
+   - None of these: poll `mousework status --json` every one to five minutes.
+2. **Run it by its full path**, `~/.local/bin/mousework`, because desktop
+   shells often don't have `~/.local/bin` in their `PATH`.
+3. **Never block the user interface.** Run the command asynchronously, with a
+   timeout of about 10 seconds. A frozen desktop shell freezes the whole
+   desktop.
+4. **Trust only exit status `0` and `version` `1`.** Anything else means
+   "unknown": show nothing or a question mark, and try again later. With
+   `--follow`, each line is one complete JSON object.
+5. **Start from `connection`.** Show the details only for `receiver`, show a
+   dimmed or "asleep" state for `asleep`, and hide for `no-receiver`. Treat a
+   value you don't know like `no-receiver`. Show `error` in a tooltip, but
+   don't parse it.
+6. **Expect `null`.** Even while connected, `battery`, `polling_hz` and the
+   other objects can be `null` when the mouse didn't answer.
+7. **Keep a slow poll as a safety net** (every two minutes or so) if you listen
+   to the signal yourself, for when `mousework-filter` isn't running.
+   `--follow` and `--wait` already do this.
+8. **To change settings, run the command-line tool** (`mousework cpi`,
+   `mousework profile use NAME`, and so on; see the README). Prefer
+   `--temporary` for profile switches that happen often, such as on scroll:
+   it doesn't write the mouse's flash memory. Avoid writing power settings
+   (high efficiency, sleep timer) repeatedly: each write makes the mouse drop
+   its link to the receiver for several seconds. Your integration then gets
+   the `Changed` signal like everyone else, so it doesn't need to update its
+   own display after a change.
+
+To test an integration without touching the mouse:
+
+```sh
+# Pretend something changed: your integration should read the status again.
+gdbus emit --session --object-path /io/github/mlkonrad/Mousework \
+    --signal io.github.mlkonrad.Mousework.Changed cpi
+
+# Watch the real signals while you press the CPI button or move a sleeping mouse.
+dbus-monitor --session "type='signal',interface='io.github.mlkonrad.Mousework'"
+
+# Check that the service that sends them is running.
+systemctl --user status mousework-filter
+```
+
+For the other states, put your own command in place of `mousework`: a script
+that prints one of the [example outputs](#example-output), for example with
+`connection` set to `asleep` or `no-receiver`.
+
 ## Examples
 
-All examples show the battery level. They are written for clarity; adapt the
-labels, icons and polling interval to taste. The shell, Python, Waybar and GNOME
-Shell examples are tested. The KDE Plasma example is **untested**.
+The examples show the battery level, and some also the CPI, polling rate and
+profile. They are written for clarity; adapt the labels and icons to taste.
+The examples that update live use [`--follow` or `--wait`](#change-notifications).
+
+Tested: the shell, Python and GNOME Shell examples, and the `jq` filters of all
+the others. **Not tested** inside the bar or desktop itself, because none was
+available: Waybar, KDE Plasma, Xfce, Polybar, i3blocks and conky. Corrections
+are welcome.
 
 ### Shell with jq
 
@@ -274,6 +405,14 @@ mousework status --json | jq -e '.connection == "receiver"' >/dev/null && echo a
 mousework status --json | jq -r '.cpi.active // empty'                    # 800
 mousework status --json | jq -r '.profile.active'                        # Gaming
 ```
+
+Live, one line per change:
+
+```sh
+mousework status --json --follow | jq --unbuffered -r '.battery.level // "-"'
+```
+
+`--unbuffered` makes jq pass each line on at once instead of collecting them.
 
 ### Python
 
@@ -312,49 +451,97 @@ else:
     print(f"Mouse: {status['connection']}")
 ```
 
-### Waybar
+Live, one status per change:
+
+```python
+with subprocess.Popen([MOUSEWORK, "status", "--json", "--follow"],
+                      stdout=subprocess.PIPE, text=True) as proc:
+    for line in proc.stdout:
+        status = json.loads(line)
+        print(status["battery"]["level"] if status["battery"] else status["connection"])
+```
+
+### Waybar (Omarchy, Hyprland, Sway, niri)
+
+Waybar is the top bar of [Omarchy](https://omarchy.org) and of most Hyprland
+and Sway setups. This module shows the battery level, has the CPI, polling rate
+and profile in its tooltip, updates live with `--follow`, and hides itself
+when the receiver is unplugged.
 
 Save this script as `~/.local/bin/mousework-waybar` and make it executable
-(`chmod +x`). It turns the status into Waybar's own JSON format:
+(`chmod +x`). It turns each status line into Waybar's own JSON format:
 
 ```sh
 #!/bin/sh
-# Waybar custom module for Mousework.
-~/.local/bin/mousework status --json 2>/dev/null | jq -c '
-  if .battery then {
+# Waybar custom module for Mousework: one line per change.
+~/.local/bin/mousework status --json --follow 2>/dev/null | jq --unbuffered -c '
+  if .connection == "receiver" and .battery then {
     text: "\(.battery.level)%",
     percentage: .battery.level,
-    tooltip: "\(.device)\nBattery \(.battery.level) %\nProfile \(.profile.active // "?")",
-    class: (if .battery.level <= 5 then "critical"
-            elif .battery.level <= 15 then "low" else "normal" end)
+    tooltip: ([.device,
+               "Battery \(.battery.level) %",
+               (if .cpi then "DPI \(.cpi.active) (preset \(.cpi.active_index) of \(.cpi.presets | length))" else empty end),
+               (if .polling_hz then "Polling rate \(.polling_hz) Hz" else empty end),
+               (if .profile then "Profile \(.profile.active)" else empty end)] | join("\n")),
+    class: (if .battery.level <= 5 then "critical" elif .battery.level <= 15 then "low" else "normal" end)
+  } elif .connection == "asleep" then {
+    text: "zz",
+    tooltip: "\(.device): asleep, move it to wake it up",
+    class: "asleep"
   } else {
-    text: (if .connection == "asleep" then "zz" else "" end),
+    text: "",
     tooltip: "\(.device): \(.connection)" + (if .error then "\n\(.error)" else "" end),
     class: .connection
   } end'
 ```
 
-In `~/.config/waybar/config`:
+To show the CPI in the bar as well, change `text` to
+`"\(.battery.level)% \(.cpi.active // "") DPI"`.
 
-```json
-"modules-right": ["custom/mouse"],
+In Waybar's config (Omarchy: `~/.config/waybar/config.jsonc`), add
+`"custom/mouse"` to `modules-right` and define the module:
+
+```jsonc
 "custom/mouse": {
   "exec": "~/.local/bin/mousework-waybar",
   "return-type": "json",
-  "interval": 120,
-  "format": "🖱 {}"
+  "restart-interval": 10,
+  "format": "󰍽 {}",
+  "on-click": "~/.local/bin/mousework-gtk",
+  "on-scroll-up": "~/.local/bin/mousework profile next --temporary",
+  "on-scroll-down": "~/.local/bin/mousework profile previous --temporary"
 }
 ```
 
-Style it in `~/.config/waybar/style.css`, for example:
+There is no `interval`: the script keeps running and Waybar redraws the module
+for every line. `restart-interval` restarts it if it ever exits. `󰍽` is the
+mouse icon of the Nerd Fonts that Omarchy uses; replace it with text if your
+font doesn't have it. Scrolling switches profiles with `--temporary` (see the
+README), so it doesn't wear out the mouse's flash memory.
+
+Style it in `style.css` next to the config, for example:
 
 ```css
 #custom-mouse.low      { color: #e5a50a; }
 #custom-mouse.critical { color: #e01b24; }
-#custom-mouse.no-receiver { opacity: 0; }
+#custom-mouse.asleep   { opacity: 0.5; }
 ```
 
+`killall -SIGUSR2 waybar` reloads the configuration and style.
+
+Mousework's motion filter adds acceleration on top of the compositor's own.
+For Mousework's only, make the compositor's flat: on Hyprland,
+`input { accel_profile = flat }` (Omarchy: `~/.config/hypr/input.conf`); on
+Sway, `input type:pointer accel_profile flat`.
+
 ### GNOME Shell extension
+
+A complete extension, with an icon, a menu with all the details, settings for
+what the top bar shows, and live updates, is in
+[`gnome-shell-extension/`](../gnome-shell-extension/) of this repository; the
+README says how to install it. The minimal version below is a starting point
+for your own. For live updates, subscribe to the signal as shown in
+[Change notifications](#change-notifications).
 
 For GNOME 45 and later. It adds the battery level to the top bar and updates it
 every two minutes. The command runs asynchronously, so the Shell never waits
@@ -480,10 +667,31 @@ The quickest route needs no code: install a "Command Output" widget from
 ~/.local/bin/mousework status --json | jq -r 'if .battery then "\(.battery.level) %" else .connection end'
 ```
 
-As your own widget, `contents/ui/main.qml`:
+As your own widget, it updates live with `--wait`: every time the command
+returns, the widget shows the result and starts it again. Make a folder
+`mousework-plasmoid` with two files. `metadata.json`:
+
+```json
+{
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0",
+  "KPlugin": {
+    "Id": "io.github.mlkonrad.mousework",
+    "Name": "Mousework",
+    "Description": "Battery and CPI of the SteelSeries Rival 3 Wireless",
+    "Icon": "input-mouse",
+    "Version": "1.0"
+  }
+}
+```
+
+`contents/ui/main.qml`:
 
 ```qml
 import QtQuick
+import QtQuick.Layouts
+import org.kde.kirigami as Kirigami
+import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.plasma.plasma5support as P5Support
@@ -493,6 +701,10 @@ PlasmoidItem {
 
     property var mouse: null
     readonly property string command: "$HOME/.local/bin/mousework status --json"
+    readonly property bool connected: mouse !== null && mouse.connection === "receiver" && mouse.battery !== null
+
+    Plasmoid.status: mouse && (mouse.connection === "receiver" || mouse.connection === "asleep")
+        ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.HiddenStatus
 
     P5Support.DataSource {
         id: executable
@@ -507,43 +719,110 @@ PlasmoidItem {
                 } catch (e) {}
             }
             root.mouse = status && status.version === 1 ? status : null
+            if (root.mouse)
+                connectSource(root.command + " --wait")  // returns at the next change
+            else
+                retry.start()  // not installed or broken: don't spin
         }
     }
 
     Timer {
-        interval: 120 * 1000
-        running: true
-        repeat: true
-        triggeredOnStart: true
+        id: retry
+        interval: 60 * 1000
         onTriggered: executable.connectSource(root.command)
     }
 
-    compactRepresentation: PlasmaComponents.Label {
-        text: !root.mouse ? "?"
-            : root.mouse.battery ? root.mouse.battery.level + " %"
-            : root.mouse.connection
+    Component.onCompleted: executable.connectSource(root.command)
+
+    compactRepresentation: RowLayout {
+        Kirigami.Icon {
+            source: "input-mouse"
+            opacity: root.connected ? 1 : 0.5
+            Layout.preferredWidth: Kirigami.Units.iconSizes.small
+            Layout.preferredHeight: Kirigami.Units.iconSizes.small
+        }
+        PlasmaComponents.Label {
+            text: root.connected ? root.mouse.battery.level + " %" : ""
+            visible: root.connected
+        }
     }
 
-    toolTipMainText: root.mouse ? root.mouse.device : "Mouse"
-    toolTipSubText: root.mouse && root.mouse.error ? root.mouse.error : ""
+    toolTipMainText: mouse ? mouse.device : "Mouse"
+    toolTipSubText: !connected ? (mouse ? mouse.connection : "")
+        : "Battery " + mouse.battery.level + " %"
+          + (mouse.cpi ? "\nCPI " + mouse.cpi.active : "")
+          + (mouse.polling_hz ? "\nPolling rate " + mouse.polling_hz + " Hz" : "")
+          + (mouse.profile ? "\nProfile " + mouse.profile.active : "")
 }
+```
+
+Install it with `kpackagetool6 -t Plasma/Applet -i mousework-plasmoid` (after
+changes, `-u` instead of `-i`), then add "Mousework" to a panel with *Add
+Widgets*.
+
+For Mousework's acceleration only, set System Settings → Mouse & Touchpad →
+Pointer acceleration to *None* (flat).
+
+### Xfce panel (untested)
+
+**This example hasn't been run** inside Xfce; its output was checked with the
+example statuses. It uses the Generic Monitor (genmon) panel plugin, which runs
+a command and shows its output.
+
+Save as `~/.local/bin/mousework-genmon` and make it executable:
+
+```sh
+#!/bin/sh
+# Xfce Generic Monitor plugin for Mousework.
+~/.local/bin/mousework status --json 2>/dev/null | jq -r '
+  if .connection == "receiver" and .battery then
+    "<icon>input-mouse-symbolic</icon><txt> \(.battery.level) %</txt>",
+    "<tool>\(.device)\nBattery \(.battery.level) %\nCPI \(.cpi.active // "?")\nPolling rate \(.polling_hz // "?") Hz\nProfile \(.profile.active // "?")</tool>"
+  else "<txt></txt>" end'
+```
+
+Add a Generic Monitor to the panel, set its command to the full path of the
+script (genmon doesn't expand `~`), and its period to 120 seconds.
+
+For live updates, have the panel refresh the plugin after every change. Hover
+over the plugin in Panel Preferences → Items to see its id, for example
+`genmon-7`, and start this at login (Session and Startup → Application
+Autostart):
+
+```sh
+~/.local/bin/mousework status --json --follow | while read -r _; do
+    xfce4-panel --plugin-event=genmon-7:refresh:bool:true
+done
 ```
 
 ### Polybar, i3blocks, conky and others
 
-Any tool that can show a command's output works with a jq one-liner.
+**Not tested** in these tools; the commands and their output were.
 
-Polybar:
+Polybar, live with `tail = true`:
 
 ```ini
 [module/mouse]
 type = custom/script
-exec = ~/.local/bin/mousework status --json | jq -r 'if .battery then "\(.battery.level)%" else "" end'
-interval = 120
+exec = ~/.local/bin/mousework status --json --follow | jq --unbuffered -r 'if .battery then "\(.battery.level)% \(.cpi.active) DPI" else "" end'
+tail = true
+click-left = ~/.local/bin/mousework-gtk &
 ```
 
-conky, inside `conky.text`:
+i3blocks (i3, Sway), live with `interval=persist`:
+
+```ini
+[mouse]
+command=~/.local/bin/mousework status --json --follow | jq --unbuffered -r 'if .battery then "\(.battery.level)%" else "" end'
+interval=persist
+```
+
+conky can't follow a command, so it polls, inside `conky.text`:
 
 ```lua
 ${execi 120 ~/.local/bin/mousework status --json | jq -r '.battery.level // "-"'} %
 ```
+
+Anything else that shows a command's output works the same way: if it reads
+lines as they come, use `--follow`; if it runs a command and waits for it to
+end, poll every one to five minutes or use `--wait` in a loop.

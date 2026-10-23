@@ -13,7 +13,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import device  # noqa: E402
 from . import protocol as p  # noqa: E402
-from .profiles import (Profile, Store, apply, import_from_device, resend_volatile,
+from .profiles import (Profile, Store, apply, import_from_device, reconcile, resend_volatile,
                        set_polling_if_needed)  # noqa: E402
 
 APP_ID = "io.github.mlkonrad.Mousework"
@@ -151,6 +151,7 @@ class Window(Adw.ApplicationWindow):
         self.mouse = None
         self.linked = False
         self.bluetooth = False
+        self._reconciled = False  # restored the active profile after a reconnect
         self._loading = False
         self._dirty = set()
         self._apply_source = None
@@ -690,10 +691,14 @@ class Window(Adw.ApplicationWindow):
                 # overwriting it; buttons and lighting have no read-back.
                 import_from_device(self.profile, m)
                 state["imported"] = True
-            elif (on_connect or not self.linked) and self.store.mouse_may_differ:
+            elif ((on_connect or not self.linked) and self.store.mouse_may_differ
+                  and not self._reconciled):
                 # After a temporary switch a power-up brings back the saved
-                # profile; re-apply the active one instead of adopting its CPI.
-                apply(copy.deepcopy(self.profile), m, save=False)
+                # profile; restore the active one instead of adopting its CPI.
+                # Only once: if a write drops the link, the next reconnect
+                # must not write again, or the mouse never stays connected.
+                self._reconciled = True
+                reconcile(copy.deepcopy(self.profile), m)
                 state["cpi"] = m.cpi_table()
             elif on_connect or not self.linked:
                 resend_volatile(self.profile, m)  # §7.2

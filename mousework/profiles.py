@@ -162,6 +162,34 @@ def set_polling_if_needed(mouse, hz):
     mouse.set_polling_hz(hz)
 
 
+def set_power_if_needed(mouse, profile, current=None):
+    """Write the profile's power settings only if the mouse differs.
+
+    Any power write, even an unchanged one, makes the mouse drop its radio
+    link for several seconds (observed with firmware 1.04).
+    """
+    current = current or mouse.power()
+    if (current.high_efficiency, current.smart_illumination, current.idle_sleep_s) == (
+            profile.high_efficiency, profile.smart_illumination, profile.sleep_minutes * 60):
+        return
+    mouse.set_power(p.PowerSettings(
+        high_efficiency=profile.high_efficiency,
+        movement_saving=p.SMART_ILLUMINATION_ON if profile.smart_illumination else 0,
+        idle_lighting_s=current.idle_lighting_s,  # GG preserves this field (§3.3)
+        idle_sleep_s=profile.sleep_minutes * 60,
+    ))
+
+
+def set_cpi_if_needed(mouse, profile):
+    table = p.make_cpi_table(profile.cpi_presets, profile.active_cpi)
+    try:
+        if mouse.cpi_table() == table:
+            return
+    except ValueError:
+        pass  # unreadable; write it to be sure
+    mouse.set_cpi_table(table)
+
+
 def apply(profile, mouse, progress=lambda message: None, save=True):
     """Write every on-mouse setting of a profile, then save to flash (§4)."""
     profile.validate()
@@ -169,18 +197,13 @@ def apply(profile, mouse, progress=lambda message: None, save=True):
     current = mouse.power()
 
     progress("Power settings")
-    mouse.set_power(p.PowerSettings(
-        high_efficiency=profile.high_efficiency,
-        movement_saving=p.SMART_ILLUMINATION_ON if profile.smart_illumination else 0,
-        idle_lighting_s=current.idle_lighting_s,  # GG preserves this field (§3.3)
-        idle_sleep_s=profile.sleep_minutes * 60,
-    ))
+    set_power_if_needed(mouse, profile, current)
     if not profile.high_efficiency:
         progress("Polling rate")
         set_polling_if_needed(mouse, profile.polling_hz)
 
     progress("Sensitivity")
-    mouse.set_cpi_table(p.make_cpi_table(profile.cpi_presets, profile.active_cpi))
+    set_cpi_if_needed(mouse, profile)
     if "lighting" in profile.managed:
         progress("Lighting")
         mouse.set_lighting(profile.lighting)
@@ -213,11 +236,7 @@ def apply_changes(target, previous, mouse):
     buttons, wheel = target.bindings()
     power_keys = ("high_efficiency", "smart_illumination", "sleep_minutes")
     if any(getattr(target, k) != getattr(previous, k) for k in power_keys):
-        current = mouse.power()
-        mouse.set_power(p.PowerSettings(
-            target.high_efficiency,
-            p.SMART_ILLUMINATION_ON if target.smart_illumination else 0,
-            current.idle_lighting_s, target.sleep_minutes * 60))
+        set_power_if_needed(mouse, target)
     if not target.high_efficiency and (target.polling_hz != previous.polling_hz
                                        or previous.high_efficiency):
         set_polling_if_needed(mouse, target.polling_hz)
@@ -228,6 +247,19 @@ def apply_changes(target, previous, mouse):
     if "buttons" in target.managed and target.buttons != previous.buttons:
         mouse.set_buttons(buttons)
         mouse.set_wheel(wheel)
+
+
+def reconcile(profile, mouse):
+    """Bring a reconnected mouse to the profile without saving to flash.
+
+    Unlike apply(), power and CPI are read first and written only if they
+    differ, so a mouse that already matches isn't knocked off its link.
+    """
+    set_power_if_needed(mouse, profile)
+    if not profile.high_efficiency:
+        set_polling_if_needed(mouse, profile.polling_hz)
+    set_cpi_if_needed(mouse, profile)
+    resend_volatile(profile, mouse)
 
 
 def resend_volatile(profile, mouse):

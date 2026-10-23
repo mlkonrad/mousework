@@ -6,7 +6,8 @@ import time
 
 from . import device
 from . import protocol as p
-from .profiles import Store, apply, apply_changes, import_from_device, set_polling_if_needed
+from .profiles import (Store, apply, apply_changes, import_from_device, set_polling_if_needed,
+                       set_power_if_needed)
 
 
 def _rgb(text):
@@ -46,13 +47,6 @@ def cmd_status(args):
         print(f"High efficiency:   {'on' if power.high_efficiency else 'off'}")
         print(f"Smart illumination:{' on' if power.smart_illumination else ' off'}")
         print(f"Sleep timer:       {power.idle_sleep_s // 60} min")
-
-
-def _write_power(m, pr):
-    current = m.power()
-    m.set_power(p.PowerSettings(
-        pr.high_efficiency, p.SMART_ILLUMINATION_ON if pr.smart_illumination else 0,
-        current.idle_lighting_s, pr.sleep_minutes * 60))
 
 
 def _write_buttons(m, pr):
@@ -111,7 +105,7 @@ def cmd_power(args):
             pr.sleep_minutes = args.sleep
 
     def write(m, pr):
-        _write_power(m, pr)
+        set_power_if_needed(m, pr)
         if not pr.high_efficiency and args.high_efficiency == "off":
             set_polling_if_needed(m, pr.polling_hz)  # restore the chosen rate (§3.3)
     _edit_profile(args, change, write)

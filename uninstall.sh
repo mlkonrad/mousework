@@ -10,6 +10,8 @@ CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
 BIN=$HOME/.local/bin
 APP_ID=io.github.mlkonrad.Mousework
 RULE=/etc/udev/rules.d/70-mousework.rules
+EXT_UUID=mousework@mlkonrad.github.com
+EXT_DIR=$DATA_HOME/gnome-shell/extensions/$EXT_UUID
 
 PURGE=0
 case "${1:-}" in
@@ -21,6 +23,20 @@ esac
 systemctl --user disable --now mousework-filter.service 2>/dev/null || true
 rm -f "$CONFIG_HOME/systemd/user/mousework-filter.service"
 systemctl --user daemon-reload
+
+if [ -e "$EXT_DIR" ] || [ -L "$EXT_DIR" ]; then
+    gnome-extensions disable "$EXT_UUID" 2>/dev/null || true
+    if command -v gsettings >/dev/null; then
+        gsettings set org.gnome.shell enabled-extensions "$(gsettings get org.gnome.shell enabled-extensions |
+            python3 -c '
+import ast, sys
+text = sys.stdin.read().strip().removeprefix("@as ")
+print([u for u in ast.literal_eval(text) if u != sys.argv[1]])
+' "$EXT_UUID")"
+    fi
+    rm -rf "$EXT_DIR"
+    echo "Removed the GNOME Shell extension."
+fi
 
 rm -f "$BIN/mousework" "$BIN/mousework-gtk" "$BIN/mousework-filter"
 rm -f "$DATA_HOME/applications/$APP_ID.desktop"

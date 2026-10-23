@@ -54,7 +54,8 @@ cd mousework
 
 The script installs everything for your user (`~/.local/share/mousework`,
 launchers in `~/.local/bin`, an app-grid entry and the `mousework-filter`
-systemd user service). It asks for sudo once, for the udev rule
+systemd user service). On GNOME it also offers the
+[top-bar indicator](#top-bar-indicator-for-gnome-shell). It asks for sudo once, for the udev rule
 `/etc/udev/rules.d/70-mousework.rules`, which gives the logged-in user access
 to:
 
@@ -110,12 +111,10 @@ mouse waking or sleeping, a new battery level, a setting or profile changed in
 the app or with the CLI), and otherwise every two minutes and whenever you
 open the menu.
 
-```sh
-glib-compile-schemas gnome-shell-extension/schemas
-ln -s "$PWD/gnome-shell-extension" ~/.local/share/gnome-shell/extensions/mousework@mlkonrad.github.com
-# log out and back in, then:
-gnome-extensions enable mousework@mlkonrad.github.com
-```
+On GNOME, `install.sh` checks that your GNOME Shell version can run it and
+asks whether to install it (with `--dev` it links to the checkout, like the
+rest). Log out and back in afterwards: GNOME loads new extensions at login.
+`uninstall.sh` removes it again.
 
 On first run, Mousework imports what the mouse can report (CPI, polling, power
 settings). Button mappings and lighting have no read-back, so they stay as

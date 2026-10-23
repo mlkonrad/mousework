@@ -5,6 +5,7 @@
 #   ./install.sh --dev    link to this checkout instead, so code changes apply directly
 #
 # Only the udev rule needs root; sudo is asked for once if it isn't installed yet.
+# On GNOME it also offers to install the top-bar indicator (gnome-shell-extension/).
 set -eu
 
 cd "$(dirname "$0")"
@@ -15,6 +16,8 @@ LIB=$DATA_HOME/mousework/lib
 BIN=$HOME/.local/bin
 APP_ID=io.github.mlkonrad.Mousework
 RULE=/etc/udev/rules.d/70-mousework.rules
+EXT_UUID=mousework@mlkonrad.github.com
+EXT_DIR=$DATA_HOME/gnome-shell/extensions/$EXT_UUID
 
 DEV=0
 case "${1:-}" in
@@ -54,6 +57,72 @@ dependency_hint() {
         *" arch "*) echo "sudo pacman -S python-gobject gtk4 libadwaita python-evdev" ;;
         *" suse "*|*" opensuse "*) echo "sudo zypper install python3-gobject-Gdk typelib-1_0-Adw-1 python3-evdev" ;;
         *) echo "install PyGObject, GTK 4, libadwaita and python-evdev with your package manager" ;;
+    esac
+}
+
+# Why this GNOME can't run the extension, or nothing if it can.
+gnome_extension_problem() {
+    command -v glib-compile-schemas >/dev/null || { echo "glib-compile-schemas is missing"; return; }
+    command -v gsettings >/dev/null || { echo "gsettings is missing"; return; }
+    gnome-shell --version 2>/dev/null | python3 -c '
+import json, re, sys
+match = re.search(r"GNOME Shell (\d+)", sys.stdin.read())
+supported = json.load(open("gnome-shell-extension/metadata.json"))["shell-version"]
+if not match:
+    print("the GNOME Shell version could not be read")
+elif match.group(1) not in supported:
+    print("it needs GNOME Shell " + ", ".join(supported) + ", this is " + match.group(1))
+'
+}
+
+# Adds the extension to (add) or removes it from (remove) GNOME's enabled list.
+enabled_extensions() {
+    gsettings set org.gnome.shell enabled-extensions "$(gsettings get org.gnome.shell enabled-extensions |
+        python3 -c '
+import ast, sys
+action, uuid = sys.argv[1:]
+text = sys.stdin.read().strip().removeprefix("@as ")
+uuids = [u for u in ast.literal_eval(text) if u != uuid]
+if action == "add":
+    uuids.append(uuid)
+print(uuids)
+' "$1" "$EXT_UUID")"
+}
+
+install_gnome_extension() {
+    say "Installing the GNOME Shell extension"
+    mkdir -p "$(dirname "$EXT_DIR")"
+    rm -rf "$EXT_DIR"
+    if [ "$DEV" = 1 ]; then
+        glib-compile-schemas gnome-shell-extension/schemas
+        ln -s "$SRC/gnome-shell-extension" "$EXT_DIR"
+    else
+        cp -r gnome-shell-extension "$EXT_DIR"
+        glib-compile-schemas "$EXT_DIR/schemas"
+    fi
+    enabled_extensions add
+    if [ "$(gsettings get org.gnome.shell disable-user-extensions)" = true ]; then
+        echo "Note: user extensions are turned off. Turn them on in the Extensions app."
+    fi
+    echo "Log out and back in to see the indicator: GNOME loads new extensions at login."
+}
+
+offer_gnome_extension() {
+    command -v gnome-shell >/dev/null || return 0  # not GNOME: nothing to offer
+    problem=$(gnome_extension_problem)
+    if [ -n "$problem" ]; then
+        echo "Skipping the GNOME Shell top-bar indicator: $problem."
+        return 0
+    fi
+    if [ ! -t 0 ]; then
+        echo "To add the GNOME Shell top-bar indicator, run ./install.sh from a terminal."
+        return 0
+    fi
+    printf 'Install the GNOME Shell top-bar indicator (battery, DPI and profile in the top bar)? [Y/n] '
+    read -r answer || answer=n
+    case $answer in
+        [nN]*) echo "Skipped. Run ./install.sh again to add it later." ;;
+        *) install_gnome_extension ;;
     esac
 }
 
@@ -103,6 +172,8 @@ fi
 systemctl --user daemon-reload
 systemctl --user enable --now mousework-filter.service >/dev/null 2>&1
 systemctl --user restart mousework-filter.service
+
+offer_gnome_extension
 
 say "Done"
 echo "Open Mousework from your app grid, or run: mousework-gtk"

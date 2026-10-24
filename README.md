@@ -88,6 +88,12 @@ mousework events                               # watch CPI button, link and batt
 mousework battery-warnings off                 # or on
 ```
 
+The app's **Renderer** setting (at the bottom of the window) picks how GTK
+draws it: Automatic, Vulkan, OpenGL or Software (Cairo). Software uses about
+half the memory (~38 MB instead of ~73 MB). If a choice leaves the window
+unusable, start it once with another renderer, which overrides the saved one:
+`GSK_RENDERER=cairo mousework-gtk`.
+
 ### Battery level in your panel or scripts
 
 `mousework status --json` prints the battery level, connection state, CPI,

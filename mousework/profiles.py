@@ -83,6 +83,7 @@ class Store:
         self.profiles = {DEFAULT_NAME: Profile()}
         self.active = DEFAULT_NAME
         self.battery_warnings = True  # app-wide, not per profile
+        self.renderer = "auto"  # GSK_RENDERER for the app window, app-wide
         # The profile whose settings the mouse holds in flash. It differs from
         # active after a temporary switch; the mouse returns to it on power-up.
         self.saved_profile = DEFAULT_NAME
@@ -101,6 +102,7 @@ class Store:
             self.profiles = {DEFAULT_NAME: Profile()}
         self.active = data.get("active", DEFAULT_NAME)
         self.battery_warnings = data.get("battery_warnings", True)
+        self.renderer = data.get("renderer", "auto")
         self.saved_profile = data.get("saved_profile", self.active)
         if self.active not in self.profiles:
             self.active = next(iter(self.profiles))
@@ -111,6 +113,7 @@ class Store:
         with open(tmp, "w") as f:
             json.dump({"active": self.active,
                        "battery_warnings": self.battery_warnings,
+                       "renderer": self.renderer,
                        "saved_profile": self.saved_profile,
                        "profiles": {n: pr.to_json() for n, pr in self.profiles.items()}},
                       f, indent=2)

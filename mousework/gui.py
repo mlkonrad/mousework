@@ -1,6 +1,7 @@
 """GTK 4 / libadwaita settings app for the Rival 3 Wireless."""
 
 import copy
+import os
 import queue
 import sys
 import threading
@@ -38,6 +39,12 @@ EFFECTS = [(p.EFFECT_OFF, "Off"), (p.EFFECT_STEADY, "Steady"), (p.EFFECT_SHIFT, 
            (p.EFFECT_BREATHE, "Breathe"), (p.EFFECT_REACTIVE, "Reactive")]
 POLLING = [125, 250, 500, 1000]
 MOTION_STYLES = [("smooth", "Smooth"), ("gg", "Same as SteelSeries GG")]
+# GSK_RENDERER values; "auto" leaves the choice to GTK
+RENDERERS = [("auto", "Automatic"), ("vulkan", "Vulkan"), ("opengl", "OpenGL"),
+             ("cairo", "Software (Cairo)")]
+# A GSK_RENDERER set before launch wins over the saved choice, so a renderer
+# that breaks the window can always be escaped with GSK_RENDERER=cairo.
+RENDERER_FROM_ENV = os.environ.get("GSK_RENDERER")
 
 # GDK key names -> HID key names in protocol.KEYS
 GDK_KEY_NAMES = {
@@ -194,6 +201,7 @@ class Window(Adw.ApplicationWindow):
         self.settings_groups += [self.stops_group, self._build_buttons(), self._build_motion()]
         for group in self.settings_groups[-2:]:
             page.add(group)
+        page.add(self._build_app())
         self.page = page
         toolbar.set_content(page)
         self.toasts.set_child(toolbar)
@@ -331,6 +339,35 @@ class Window(Adw.ApplicationWindow):
         self.motion_style.connect("notify::selected", lambda *_: self._changed("motion"))
         group.add(self.motion_style)
         return group
+
+    def _build_app(self):
+        group = Adw.PreferencesGroup(title="App")
+        self.renderer = Adw.ComboRow(
+            title="Renderer",
+            subtitle="How this window is drawn. Software uses about half the memory; "
+                     "switch if the window looks wrong",
+            model=string_list(label for _, label in RENDERERS))
+        keys = [key for key, _ in RENDERERS]
+        if RENDERER_FROM_ENV:
+            self.renderer.set_subtitle(f"Set by GSK_RENDERER={RENDERER_FROM_ENV}")
+            self.renderer.set_sensitive(False)
+        if self.store.renderer in keys:
+            self.renderer.set_selected(keys.index(self.store.renderer))
+        self.renderer.connect("notify::selected", self._on_renderer)
+        group.add(self.renderer)
+        return group
+
+    def _on_renderer(self, row, _pspec):
+        self.store.renderer = RENDERERS[row.get_selected()][0]
+        self.store.save()
+        toast = Adw.Toast(title="Restart Mousework to use the new renderer",
+                          button_label="Restart")
+        toast.connect("button-clicked", self._restart)
+        self.toasts.add_toast(toast)
+
+    def _restart(self, *_):
+        self.get_application().restart = True
+        self.close()
 
     def _update_motion_rows(self):
         pr = self.profile
@@ -848,6 +885,7 @@ class Window(Adw.ApplicationWindow):
 class App(Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+        self.restart = False
 
     def do_activate(self):
         window = self.get_active_window() or Window(self)
@@ -855,7 +893,16 @@ class App(Adw.Application):
 
 
 def main():
-    return App().run(sys.argv)
+    renderer = Store().renderer
+    if not RENDERER_FROM_ENV and renderer != "auto":
+        os.environ["GSK_RENDERER"] = renderer  # GTK reads it when the first window is drawn
+    app = App()
+    status = app.run(sys.argv)
+    if app.restart:
+        if not RENDERER_FROM_ENV:
+            os.environ.pop("GSK_RENDERER", None)
+        os.execv(sys.executable, [sys.executable, "-m", "mousework.gui", *sys.argv[1:]])
+    return status
 
 
 if __name__ == "__main__":

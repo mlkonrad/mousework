@@ -48,6 +48,18 @@ class SettingTests(unittest.TestCase):
             s.save()
             self.assertFalse(Store(path).battery_warnings)
 
+    def test_renderer_round_trip(self):
+        import os
+        import tempfile
+        from mousework.profiles import Store
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "profiles.json")
+            self.assertEqual(Store(path).renderer, "auto")  # default leaves it to GTK
+            s = Store(path)
+            s.renderer = "cairo"
+            s.save()
+            self.assertEqual(Store(path).renderer, "cairo")
+
     def test_service_respects_off(self):
         from mousework import filterd
         sent = []

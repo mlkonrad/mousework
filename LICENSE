@@ -19,3 +19,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+The app icon (data/icons/hicolor/*/apps/io.github.mlkonrad.Mousework.*) is
+not covered by the MIT License above. It is an adaptation of the input-mouse
+icon from the Adwaita icon theme by the GNOME Project
+(https://gitlab.gnome.org/GNOME/adwaita-icon-theme), recoloured for
+Mousework. Like the original, it is licensed under the Creative Commons
+Attribution-ShareAlike 3.0 Unported License
+(https://creativecommons.org/licenses/by-sa/3.0/).

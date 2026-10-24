@@ -185,4 +185,6 @@ python3 -m unittest discover -s tests -t .
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). The app icon is an exception: it is adapted
+from GNOME's Adwaita `input-mouse` icon and licensed under
+[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).

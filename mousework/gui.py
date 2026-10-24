@@ -152,7 +152,7 @@ class KeyCaptureDialog(Adw.Dialog):
 class Window(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Mousework", default_width=560,
-                         default_height=760)
+                         default_height=760, icon_name=APP_ID)
         self.store = Store()
         self.worker = Worker()
         self.mouse = None

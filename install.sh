@@ -159,6 +159,11 @@ launcher mousework-filter mousework.filterd
 
 sed "s|^Exec=.*|Exec=$BIN/mousework-gtk|" data/$APP_ID.desktop > "$DATA_HOME/applications/$APP_ID.desktop"
 command -v update-desktop-database >/dev/null && update-desktop-database "$DATA_HOME/applications" 2>/dev/null || true
+for icon in data/icons/hicolor/*/apps/$APP_ID.*; do
+    install -Dm644 "$icon" "$DATA_HOME/icons/${icon#data/icons/}"
+done
+command -v gtk-update-icon-cache >/dev/null &&
+    gtk-update-icon-cache -qtf "$DATA_HOME/icons/hicolor" 2>/dev/null || true
 sed "s|^ExecStart=.*|ExecStart=$BIN/mousework-filter|" data/mousework-filter.service \
     > "$CONFIG_HOME/systemd/user/mousework-filter.service"
 

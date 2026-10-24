@@ -2,7 +2,7 @@
 Name=Mousework
 Comment=Settings for the SteelSeries Rival 3 Wireless mouse (unofficial)
 Exec=mousework-gtk
-Icon=input-mouse
+Icon=io.github.mlkonrad.Mousework
 Terminal=false
 Type=Application
 Categories=Settings;HardwareSettings;

@@ -40,6 +40,8 @@ fi
 
 rm -f "$BIN/mousework" "$BIN/mousework-gtk" "$BIN/mousework-filter"
 rm -f "$DATA_HOME/applications/$APP_ID.desktop"
+rm -f "$DATA_HOME/icons/hicolor/scalable/apps/$APP_ID.svg" \
+    "$DATA_HOME/icons/hicolor/256x256/apps/$APP_ID.png"
 rm -rf "$DATA_HOME/mousework"
 
 if [ -e "$RULE" ]; then

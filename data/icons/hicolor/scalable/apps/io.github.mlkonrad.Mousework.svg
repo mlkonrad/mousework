@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <filter id="filter-1" filterUnits="userSpaceOnUse" x="18.5" y="98.5" width="91" height="37" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5"/></filter>
+    <linearGradient id="linear-gradient-1" x1="28" y1="117" x2="100" y2="117" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00c8ff"/>
+      <stop offset="1" stop-color="#ff2bd6"/>
+    </linearGradient>
+    <clipPath id="clip-path-1">
+      <path d="M26 6 L102 6 L102 123 L26 123 Z M26 6"/>
+    </clipPath>
+    <clipPath id="clip-path-2">
+      <path d="M63.98 3.71 C42.94 3.71 26 20.66 26 41.71 L26 86.51 C26 107.62 42.95 124.62 64 124.62 C85.05 124.62 102 107.62 102 86.51 L102 46.66 C102 46.18 101.99 45.71 101.97 45.24 L101.97 41.71 C101.97 20.66 85.03 3.71 63.98 3.71 Z M63.98 3.71"/>
+    </clipPath>
+    <linearGradient id="linear-gradient-2" x1="26" y1="100" x2="102" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00c8ff"/>
+      <stop offset="0.5" stop-color="#7a5cff"/>
+      <stop offset="1" stop-color="#ff2bd6"/>
+    </linearGradient>
+    <clipPath id="clip-path-3">
+      <path d="M26 3 L102 3 L102 116 L26 116 Z M26 3"/>
+    </clipPath>
+    <clipPath id="clip-path-4">
+      <path d="M63.98 3.71 C42.94 3.71 26 20.66 26 41.71 L26 86.51 C26 107.62 42.95 124.62 64 124.62 C85.05 124.62 102 107.62 102 86.51 L102 46.66 C102 46.18 101.99 45.71 101.97 45.24 L101.97 41.71 C101.97 20.66 85.03 3.71 63.98 3.71 Z M63.98 3.71"/>
+    </clipPath>
+    <radialGradient id="radial-gradient-1" cx="56" cy="50" r="78.41" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f5667"/>
+      <stop offset="0.6" stop-color="#2b2f39"/>
+      <stop offset="1" stop-color="#16181e"/>
+    </radialGradient>
+    <clipPath id="clip-path-5">
+      <path d="M62 3 L64 3 L64 19 L62 19 Z M62 3"/>
+    </clipPath>
+    <clipPath id="clip-path-6">
+      <path d="M63.98 3.71 C42.94 3.71 26 20.66 26 41.71 L26 86.51 C26 107.62 42.95 124.62 64 124.62 C85.05 124.62 102 107.62 102 86.51 L102 46.66 C102 46.18 101.99 45.71 101.97 45.24 L101.97 41.71 C101.97 20.66 85.03 3.71 63.98 3.71 Z M63.98 3.71"/>
+    </clipPath>
+    <clipPath id="clip-path-7">
+      <path d="M64 3 L66 3 L66 19 L64 19 Z M64 3"/>
+    </clipPath>
+    <clipPath id="clip-path-8">
+      <path d="M63.98 3.71 C42.94 3.71 26 20.66 26 41.71 L26 86.51 C26 107.62 42.95 124.62 64 124.62 C85.05 124.62 102 107.62 102 86.51 L102 46.66 C102 46.18 101.99 45.71 101.97 45.24 L101.97 41.71 C101.97 20.66 85.03 3.71 63.98 3.71 Z M63.98 3.71"/>
+    </clipPath>
+    <filter id="filter-2" filterUnits="userSpaceOnUse" x="48.85" y="6.05" width="30.3" height="47.2" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="2"/></filter>
+    <clipPath id="clip-path-9">
+      <path d="M58.8 16 L69.2 16 L69.2 43.3 L58.8 43.3 Z M58.8 16"/>
+    </clipPath>
+    <clipPath id="clip-path-10">
+      <path d="M63.99 8.01 C50.31 8.01 39.3 19.03 39.3 32.71 L39.3 61.83 C39.3 75.56 50.32 86.61 64 86.61 C77.68 86.61 88.7 75.56 88.7 61.83 L88.7 35.93 C88.7 35.62 88.69 35.31 88.68 35 L88.68 32.71 C88.68 19.03 77.67 8.01 63.99 8.01 Z M63.99 8.01"/>
+    </clipPath>
+    <linearGradient id="linear-gradient-3" x1="64" y1="16" x2="64" y2="43.3" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7df9ff"/>
+      <stop offset="0.5" stop-color="#00c8ff"/>
+      <stop offset="1" stop-color="#b14dff"/>
+    </linearGradient>
+    <clipPath id="clip-path-11">
+      <path d="M60.75 16.65 L67.25 16.65 L67.25 23.8 L60.75 23.8 Z M60.75 16.65"/>
+    </clipPath>
+    <clipPath id="clip-path-12">
+      <path d="M63.99 8.01 C50.31 8.01 39.3 19.03 39.3 32.71 L39.3 61.83 C39.3 75.56 50.32 86.61 64 86.61 C77.68 86.61 88.7 75.56 88.7 61.83 L88.7 35.93 C88.7 35.62 88.69 35.31 88.68 35 L88.68 32.71 C88.68 19.03 77.67 8.01 63.99 8.01 Z M63.99 8.01"/>
+    </clipPath>
+  </defs>
+  <title>adwaita-input-mouse.svg</title>
+  <g>
+    <g filter="url(#filter-1)">
+      <path d="M28 117 C28 112.03 44.12 108 64 108 C83.88 108 100 112.03 100 117 C100 121.97 83.88 126 64 126 C44.12 126 28 121.97 28 117 Z" fill="url(#linear-gradient-1)" opacity="0.55"/>
+    </g>
+    <g clip-path="url(#clip-path-1)">
+      <g clip-path="url(#clip-path-2)">
+        <path d="M64 6.47 C84.99 6.47 102 23.45 102 44.41 L102 84.07 C102 105.03 84.99 122.02 64 122.02 C43.01 122.02 26 105.03 26 84.07 L26 44.41 C26 23.45 43.01 6.47 64 6.47 Z M64 6.47" fill="url(#linear-gradient-2)"/>
+      </g>
+    </g>
+    <g clip-path="url(#clip-path-3)">
+      <g clip-path="url(#clip-path-4)">
+        <path d="M63.98 3.71 C84.96 3.71 101.97 20.19 101.97 40.51 L101.97 78.99 C101.97 99.31 84.96 115.79 63.98 115.79 C43.01 115.79 26 99.31 26 78.99 L26 40.51 C26 20.19 43.01 3.71 63.98 3.71 Z M63.98 3.71" fill="url(#radial-gradient-1)"/>
+      </g>
+    </g>
+    <g clip-path="url(#clip-path-5)">
+      <g clip-path="url(#clip-path-6)">
+        <path d="M62.64 -2.39 L63.36 -2.39 C63.71 -2.39 64 -1.81 64 -1.09 L64 16.72 C64 17.43 63.71 18.02 63.36 18.02 L62.64 18.02 C62.29 18.02 62 17.43 62 16.72 L62 -1.09 C62 -1.81 62.29 -2.39 62.64 -2.39 Z M62.64 -2.39" fill="#4a5060"/>
+      </g>
+    </g>
+    <g clip-path="url(#clip-path-7)">
+      <g clip-path="url(#clip-path-8)">
+        <path d="M64.64 -2.39 L65.36 -2.39 C65.71 -2.39 66 -1.81 66 -1.09 L66 16.72 C66 17.43 65.71 18.02 65.36 18.02 L64.64 18.02 C64.29 18.02 64 17.43 64 16.72 L64 -1.09 C64 -1.81 64.29 -2.39 64.64 -2.39 Z M64.64 -2.39" fill="#101217"/>
+      </g>
+    </g>
+    <g filter="url(#filter-2)">
+      <path d="M64 14.05 L64 14.05 C67.95 14.05 71.15 17.25 71.15 21.2 L71.15 38.1 C71.15 42.05 67.95 45.25 64 45.25 L64 45.25 C60.05 45.25 56.85 42.05 56.85 38.1 L56.85 21.2 C56.85 17.25 60.05 14.05 64 14.05 Z" fill="#00d5ff" opacity="0.55"/>
+    </g>
+    <g clip-path="url(#clip-path-9)">
+      <g clip-path="url(#clip-path-10)">
+        <path d="M64 16 C66.87 16 69.2 18.4 69.2 21.36 L69.2 37.94 C69.2 40.9 66.87 43.3 64 43.3 C61.13 43.3 58.8 40.9 58.8 37.94 L58.8 21.36 C58.8 18.4 61.13 16 64 16 Z M64 16" fill="url(#linear-gradient-3)"/>
+      </g>
+    </g>
+    <g clip-path="url(#clip-path-11)">
+      <g clip-path="url(#clip-path-12)">
+        <path d="M67.14 20.33 C67.14 22.04 65.73 23.43 63.99 23.43 C62.25 23.43 60.84 22.04 60.84 20.33 C60.84 18.62 62.25 17.23 63.99 17.23 C65.73 17.23 67.14 18.62 67.14 20.33 Z M67.14 20.33" fill="#e6feff" fill-opacity="0.102"/>
+      </g>
+    </g>
+  </g>
+</svg>

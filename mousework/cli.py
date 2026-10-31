@@ -7,8 +7,8 @@ import time
 
 from . import device, sync
 from . import protocol as p
-from .profiles import (Store, apply, apply_changes, import_from_device, set_polling_if_needed,
-                       set_power_if_needed)
+from .profiles import (Store, apply, apply_changes, import_from_device, polling_target,
+                       set_polling_if_needed, set_power_if_needed)
 
 
 def _rgb(text):
@@ -32,7 +32,10 @@ def cmd_status(args):
         print("mousework: --follow and --wait need --json", file=sys.stderr)
         sys.exit(2)
     with device.Mouse() as m:
+        model = m.model
         radio = m.radio_status()
+        print(f"Model:             {model.name}"
+              + (" (untested support)" if model.untested else ""))
         print(f"Receiver firmware: {m.receiver_version()}")
         if radio != p.RADIO_LINKED:
             print(f"Mouse: not reachable (radio status {radio}); wake it or pair it")
@@ -40,14 +43,17 @@ def cmd_status(args):
         bat = m.battery()
         table = m.cpi_table()
         power = m.power()
+        hem = Store().current.high_efficiency if model.host_high_efficiency \
+            else power.high_efficiency
         hz = 125 if power.high_efficiency else m.polling_hz()
         print(f"Mouse firmware:    {m.mouse_version()}")
         print(f"Battery:           {bat.level}%" if bat.known else "Battery: unknown")
         print("CPI presets:       " + "  ".join(
             f"[{c}]" if i + 1 == table.active else str(c) for i, c in enumerate(table.presets)))
         print(f"Polling rate:      {hz} Hz")
-        print(f"High efficiency:   {'on' if power.high_efficiency else 'off'}")
-        print(f"Smart illumination:{' on' if power.smart_illumination else ' off'}")
+        print(f"High efficiency:   {'on' if hem else 'off'}")
+        if model.smart_illumination:
+            print(f"Smart illumination:{' on' if power.smart_illumination else ' off'}")
         print(f"Sleep timer:       {power.idle_sleep_s // 60} min")
 
 
@@ -135,9 +141,15 @@ def cmd_power(args):
             pr.sleep_minutes = args.sleep
 
     def write(m, pr):
+        if args.smart_illumination is not None and not m.model.smart_illumination:
+            print(f"note: the {m.model.name} has no smart illumination; saved in the "
+                  "profile only")
         set_power_if_needed(m, pr)
-        if not pr.high_efficiency and args.high_efficiency == "off":
-            set_polling_if_needed(m, pr.polling_hz)  # restore the chosen rate (spec 3.3)
+        hz = polling_target(pr, m.model)
+        if args.high_efficiency is not None and hz:
+            # Restore the chosen rate (spec 3.3), or fix 125 Hz on a mouse
+            # whose high efficiency mode is host-side (survey C.1).
+            set_polling_if_needed(m, hz)
     _edit_profile(args, change, write)
 
 
@@ -155,7 +167,13 @@ def cmd_light(args):
             light.stops = args.stops
         if args.speed:
             light.speed = args.speed
-    _edit_profile(args, change, lambda m, pr: m.set_lighting(pr.lighting))
+
+    def write(m, pr):
+        if not m.model.lighting:
+            raise SystemExit(f"mousework: the {m.model.name} has no lighting; the setting "
+                             "was saved in the profile only")
+        m.set_lighting(pr.lighting)
+    _edit_profile(args, change, write)
 
 
 def cmd_bind(args):
@@ -288,7 +306,8 @@ def cmd_events(args):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="mousework",
-                                 description="Settings for the SteelSeries Rival 3 Wireless (unofficial)")
+                                 description="Settings for the SteelSeries Rival 3 Wireless "
+                                             "and Rival 3 Wireless Gen 2 (unofficial)")
     sub = ap.add_subparsers(dest="command", required=True)
 
     def editing(name, **kw):

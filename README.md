@@ -3,6 +3,11 @@
 Settings for the **SteelSeries Rival 3 Wireless** (USB `1038:1830`) on Linux:
 a GTK 4 / libadwaita app, a command-line tool and a small background service.
 
+The **Rival 3 Wireless Gen 2** (USB `1038:1872`) is supported too, but that
+support is **untested**: it was written from the specification alone, without
+the mouse at hand. If you have one, please report how it works, together with
+the output of `mousework status`. See [Rival 3 Wireless Gen 2](#rival-3-wireless-gen-2).
+
 Mousework is an independent project. It is not made, endorsed or supported by
 SteelSeries. SteelSeries, Rival and SteelSeries GG are trademarks of their
 owners and are used here only to say which hardware Mousework works with.
@@ -13,8 +18,9 @@ Mousework was written from a behavioral specification of how SteelSeries GG
 talks to this mouse, produced in a separate reverse-engineering pass for
 interoperability. The people writing Mousework's code never saw GG's files,
 decompiled code or reverse-engineering notes. Section references such as
-`spec 3.1` in the code point into that specification, which is not part of this
-repository.
+`spec 3.1` in the code point into that specification, and `survey C.1` into a
+later survey of other SteelSeries models made the same way. Neither is part of
+this repository.
 
 ## Features
 
@@ -61,11 +67,33 @@ What Mousework adds for this mouse:
 - live updates from the mouse, `mousework status --json` for panels and the
   GNOME Shell indicator.
 
-Where rivalcfg is ahead: it supports dozens of SteelSeries mice, including
-the Rival 3 Wireless Gen 2, while Mousework supports only the Rival 3
-Wireless. If you need another model, use rivalcfg.
+Where rivalcfg is ahead: it supports dozens of SteelSeries mice, while
+Mousework supports the Rival 3 Wireless and, untested so far, the Rival 3
+Wireless Gen 2. If you need another model, use rivalcfg.
 
 Mousework doesn't use code from either project.
+
+## Rival 3 Wireless Gen 2
+
+The Gen 2 is a different mouse with its own receiver (`1038:1872`), so it
+needs no extra setup: Mousework finds whichever receiver is plugged in. Its
+differences, as far as Mousework is concerned:
+
+- No lighting and no smart illumination. The app hides them, and
+  `mousework light` refuses. Profiles keep their lighting settings for a
+  Rival 3 Wireless.
+- High efficiency mode isn't a setting of the mouse itself. Mousework keeps
+  the switch in the profile and sets the polling rate to 125 Hz while it's
+  on, which is what SteelSeries GG does for this mouse.
+- The mouse can set X and Y sensitivity separately. Mousework always sets
+  both to the same value; a preset with different values is shown with its
+  X value.
+- Low-battery notifications ignore the first 10 seconds after the mouse
+  connects, when fresh alkaline cells read low.
+- Not implemented: the mouse's wireless power settings (link redundancy and
+  Bluetooth boost). Mousework leaves them as they are.
+
+None of this has been tried on the real mouse yet.
 
 ## Install
 

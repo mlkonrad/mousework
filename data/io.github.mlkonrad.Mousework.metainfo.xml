@@ -6,7 +6,7 @@
   <project_license>MIT</project_license>
 
   <name>Mousework</name>
-  <summary>Settings for the SteelSeries Rival 3 Wireless mouse</summary>
+  <summary>Settings for SteelSeries Rival 3 Wireless mice</summary>
   <developer id="io.github.mlkonrad">
     <name>Marlon Konrad</name>
   </developer>
@@ -15,11 +15,12 @@
     <p>
       Mousework sets up the SteelSeries Rival 3 Wireless on Linux: everything
       the mouse stores itself, plus pointer tuning and battery warnings that
-      run on your computer.
+      run on your computer. Support for the Rival 3 Wireless Gen 2 is new and
+      not yet tested on the real mouse.
     </p>
     <ul>
       <li>CPI presets and polling rate</li>
-      <li>Wheel lighting: steady, colour shift, breathe and reactive</li>
+      <li>Wheel lighting: steady, colour shift, breathe and reactive (Rival 3 Wireless)</li>
       <li>Remap the buttons and wheel to clicks, keyboard shortcuts and media keys</li>
       <li>Named profiles, switched from the app, the command line or the GNOME top bar</li>
       <li>Acceleration, deceleration and smoothing</li>
@@ -69,6 +70,7 @@
     <binary>mousework-gtk</binary>
     <!-- The USB receiver, so software centers can suggest Mousework when it is plugged in. -->
     <modalias>usb:v1038p1830d*</modalias>
+    <modalias>usb:v1038p1872d*</modalias>
   </provides>
 
   <supports>

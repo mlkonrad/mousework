@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Mousework
-Comment=Settings for the SteelSeries Rival 3 Wireless mouse (unofficial)
+Comment=Settings for SteelSeries Rival 3 Wireless mice (unofficial)
 Exec=mousework-gtk
 Icon=io.github.mlkonrad.Mousework
 Terminal=false

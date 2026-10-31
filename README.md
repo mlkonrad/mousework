@@ -40,6 +40,33 @@ Not implemented:
   doesn't tell apps which window is focused; anything that does (a Shell
   extension, a compositor script) can call `mousework profile use NAME`.
 
+## Compared with other tools
+
+Two other Linux tools configure SteelSeries mice. As of October 2026:
+
+- [Piper](https://github.com/libratbag/piper), the GUI for
+  [libratbag](https://github.com/libratbag/libratbag), doesn't support the
+  Rival 3 Wireless: libratbag has no device file for `1038:1830`.
+- [rivalcfg](https://github.com/flozz/rivalcfg) (command line, WTFPL license)
+  supports it: CPI presets, polling rate, mapping buttons 1 to 6, battery
+  level and firmware version.
+
+What Mousework adds for this mouse:
+
+- a GTK 4 / libadwaita app, next to the command line;
+- wheel lighting, power settings (high efficiency mode, smart illumination,
+  sleep timer), remapping the scroll wheel, and pairing;
+- named profiles, the motion filter (acceleration, deceleration, smoothing)
+  and low-battery notifications;
+- live updates from the mouse, `mousework status --json` for panels and the
+  GNOME Shell indicator.
+
+Where rivalcfg is ahead: it supports dozens of SteelSeries mice, including
+the Rival 3 Wireless Gen 2, while Mousework supports only the Rival 3
+Wireless. If you need another model, use rivalcfg.
+
+Mousework doesn't use code from either project.
+
 ## Install
 
 ### Fedora

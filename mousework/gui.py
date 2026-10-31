@@ -14,6 +14,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import device, sync  # noqa: E402
 from . import protocol as p  # noqa: E402
+from .top_bar import TopBar  # noqa: E402
 from .profiles import (Profile, Store, apply, import_from_device, reconcile, resend_volatile,
                        set_polling_if_needed)  # noqa: E402
 
@@ -45,6 +46,8 @@ RENDERERS = [("auto", "Automatic"), ("vulkan", "Vulkan"), ("opengl", "OpenGL"),
 # A GSK_RENDERER set before launch wins over the saved choice, so a renderer
 # that breaks the window can always be escaped with GSK_RENDERER=cairo.
 RENDERER_FROM_ENV = os.environ.get("GSK_RENDERER")
+TOP_BAR_SUBTITLE = "Battery level, DPI and profile in GNOME's top bar"
+TOP_BAR_LOGIN = "Appears after you log out and back in"
 
 # GDK key names -> HID key names in protocol.KEYS
 GDK_KEY_NAMES = {
@@ -209,6 +212,7 @@ class Window(Adw.ApplicationWindow):
 
         self._reload_profiles()
         self._load_profile()
+        self._offer_top_bar()
         self._connect()
         GLib.timeout_add_seconds(POLL_INTERVAL_S, self._poll)
         self.connect("close-request", self._on_close)
@@ -342,6 +346,15 @@ class Window(Adw.ApplicationWindow):
 
     def _build_app(self):
         group = Adw.PreferencesGroup(title="App")
+        self.top_bar = TopBar()
+        self._top_bar_syncing = False
+        self.top_bar_row = Adw.SwitchRow(title="Top bar indicator", subtitle=TOP_BAR_SUBTITLE,
+                                         visible=self.top_bar.available)
+        if self.top_bar.available:
+            self._sync_top_bar()
+            self.top_bar.connect_changed(self._sync_top_bar)
+        self.top_bar_row.connect("notify::active", self._on_top_bar)
+        group.add(self.top_bar_row)
         self.renderer = Adw.ComboRow(
             title="Renderer",
             subtitle="How this window is drawn. Software uses about half the memory; "
@@ -368,6 +381,39 @@ class Window(Adw.ApplicationWindow):
     def _restart(self, *_):
         self.get_application().restart = True
         self.close()
+
+    def _sync_top_bar(self):
+        """Show the indicator's state, also after a change in the Extensions app."""
+        self._top_bar_syncing = True
+        enabled = self.top_bar.enabled
+        self.top_bar_row.set_active(enabled)
+        self.top_bar_row.set_sensitive(self.top_bar.can_change)
+        login = enabled and self.top_bar.needs_login
+        self.top_bar_row.set_subtitle(TOP_BAR_LOGIN if login else TOP_BAR_SUBTITLE)
+        self._top_bar_syncing = False
+
+    def _on_top_bar(self, row, _pspec):
+        if self._top_bar_syncing:
+            return
+        on = row.get_active()
+        self.top_bar.set_enabled(on)
+        if on and self.top_bar.needs_login:
+            self._toast("The top bar indicator appears after you log out and back in")
+
+    def _offer_top_bar(self):
+        """Once per user: point out the indicator if it is installed but off."""
+        if (self.store.top_bar_hint_shown or not self.top_bar.available
+                or self.top_bar.enabled or not self.top_bar.can_change):
+            return
+        self.store.top_bar_hint_shown = True
+        # Saving now would make the next start skip the first-run import from
+        # the mouse; the import saves the flag along with everything else.
+        if not self.store.fresh:
+            self.store.save()
+        toast = Adw.Toast(title="Show battery and DPI in the top bar?", button_label="Show",
+                          timeout=10)
+        toast.connect("button-clicked", lambda *_: self.top_bar_row.set_active(True))
+        self.toasts.add_toast(toast)
 
     def _update_motion_rows(self):
         pr = self.profile

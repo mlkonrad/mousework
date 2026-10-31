@@ -84,6 +84,7 @@ class Store:
         self.active = DEFAULT_NAME
         self.battery_warnings = True  # app-wide, not per profile
         self.renderer = "auto"  # GSK_RENDERER for the app window, app-wide
+        self.top_bar_hint_shown = False  # the app offered the GNOME top-bar indicator once
         # The profile whose settings the mouse holds in flash. It differs from
         # active after a temporary switch; the mouse returns to it on power-up.
         self.saved_profile = DEFAULT_NAME
@@ -103,6 +104,7 @@ class Store:
         self.active = data.get("active", DEFAULT_NAME)
         self.battery_warnings = data.get("battery_warnings", True)
         self.renderer = data.get("renderer", "auto")
+        self.top_bar_hint_shown = data.get("top_bar_hint_shown", False)
         self.saved_profile = data.get("saved_profile", self.active)
         if self.active not in self.profiles:
             self.active = next(iter(self.profiles))
@@ -114,6 +116,7 @@ class Store:
             json.dump({"active": self.active,
                        "battery_warnings": self.battery_warnings,
                        "renderer": self.renderer,
+                       "top_bar_hint_shown": self.top_bar_hint_shown,
                        "saved_profile": self.saved_profile,
                        "profiles": {n: pr.to_json() for n, pr in self.profiles.items()}},
                       f, indent=2)

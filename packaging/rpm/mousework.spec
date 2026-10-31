@@ -47,7 +47,8 @@ Supplements:    (%{name} and gnome-shell)
 %description gnome-shell-extension
 Shows the battery level, DPI, polling rate and active profile of a SteelSeries
 Rival 3 Wireless in the GNOME Shell top bar, and switches profiles from its
-menu. Turn it on in the Extensions app, then log out and back in.
+menu. Mousework offers to turn it on the first time it starts; the switch
+is also in its App settings.
 
 %prep
 %autosetup -p1

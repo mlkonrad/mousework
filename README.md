@@ -131,6 +131,14 @@ asks whether to install it (with `--dev` it links to the checkout, like the
 rest). Log out and back in afterwards: GNOME loads new extensions at login.
 `uninstall.sh` removes it again.
 
+The **Top bar indicator** switch in the app's App section turns the
+indicator on or off for your user; it appears whenever the extension is
+installed and you're on GNOME. A distribution package can install the
+extension but not turn it on, so the first time you open Mousework with the
+indicator installed but off, it offers to turn it on. Right after installing
+the extension, it starts at your next login; after that, the switch takes
+effect at once.
+
 On first run, Mousework imports what the mouse can report (CPI, polling, power
 settings). Button mappings and lighting have no read-back, so they stay as
 they are on the mouse until you change them.

@@ -41,7 +41,7 @@ Where the `mousework` command lives depends on how you installed it:
 | Installed with | Command |
 |---|---|
 | `install.sh` | `~/.local/bin/mousework` |
-| a distribution package (RPM, AUR, ...) | `/usr/bin/mousework` |
+| a distribution package (such as the Fedora Copr RPM) | `/usr/bin/mousework` |
 
 Desktop shells don't always have `~/.local/bin` in their `PATH` (GNOME Shell
 on Fedora doesn't), so from an extension or widget call it by its full path.

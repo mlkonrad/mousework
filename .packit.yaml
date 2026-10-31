@@ -1,0 +1,17 @@
+# Packit (https://packit.dev): build the RPM in the mlkonrad/mousework Copr
+# project whenever a GitHub release is published, so users get it with
+# their next system update. Packit takes the version from the release tag
+# and builds from the tagged source.
+
+specfile_path: packaging/rpm/mousework.spec
+upstream_package_name: mousework
+upstream_tag_template: v{version}
+
+jobs:
+  - job: copr_build
+    trigger: release
+    owner: mlkonrad
+    project: mousework
+    targets:
+      - fedora-all-x86_64
+      - fedora-all-aarch64

@@ -42,6 +42,34 @@ Not implemented:
 
 ## Install
 
+### Fedora
+
+Mousework is packaged for Fedora 43 and newer (x86_64 and aarch64) in the
+[mlkonrad/mousework](https://copr.fedorainfracloud.org/coprs/mlkonrad/mousework/)
+Copr repository:
+
+```sh
+sudo dnf copr enable mlkonrad/mousework
+sudo dnf install mousework
+```
+
+New versions then arrive with your normal system updates (`dnf upgrade`,
+GNOME Software). The package installs the app, the `mousework` command, the
+udev rule (see [below](#device-access)) and the `mousework-filter` user
+service, which starts at your next login: log out and back in once after
+installing. On GNOME it also installs the
+[top-bar indicator](#top-bar-indicator-for-gnome-shell), and Mousework offers
+to turn it on the first time you open it.
+
+To remove it: `sudo dnf remove mousework`. Your profiles in
+`~/.config/mousework` stay. To keep the app but drop the indicator:
+`sudo dnf remove mousework-gnome-shell-extension`.
+
+If you used `install.sh` before, run `./uninstall.sh` first: a copy in
+`~/.local` takes precedence over the package.
+
+### Other distributions
+
 Mousework needs Python 3.11+, PyGObject with GTK 4 and libadwaita, and
 python-evdev. `install.sh` checks for them and prints the command for your
 distribution if something is missing.
@@ -55,17 +83,21 @@ cd mousework
 The script installs everything for your user (`~/.local/share/mousework`,
 launchers in `~/.local/bin`, an app-grid entry and the `mousework-filter`
 systemd user service). On GNOME it also offers the
-[top-bar indicator](#top-bar-indicator-for-gnome-shell). It asks for sudo once, for the udev rule
-`/etc/udev/rules.d/70-mousework.rules`, which gives the logged-in user access
-to:
+[top-bar indicator](#top-bar-indicator-for-gnome-shell). It asks for sudo once,
+for the udev rule `/etc/udev/rules.d/70-mousework.rules`. To update, run
+`git pull` and `./install.sh` again.
+
+To remove it: `./uninstall.sh` (add `--purge` to delete your profiles too).
+
+### Device access
+
+The udev rule (`70-mousework.rules`) gives the logged-in user access to:
 
 - the receiver's hidraw interfaces, to read and change the mouse's settings;
 - the mouse's input device (not its keyboard interface), so the motion filter
   can read movement;
 - `/dev/uinput`, so the motion filter can create its virtual mouse. Any program
   you run can use uinput to send input events; many systems allow this already.
-
-To remove it: `./uninstall.sh` (add `--purge` to delete your profiles too).
 
 ## Use
 

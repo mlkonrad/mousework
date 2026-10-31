@@ -37,7 +37,7 @@ class Warning:
 
     @property
     def body(self):
-        return (f"Your Rival 3 Wireless is at {self.level} %. "
+        return (f"Your mouse is at {self.level} %. "
                 + ("Replace the battery now." if self.critical
                    else "Replace the battery soon."))
 

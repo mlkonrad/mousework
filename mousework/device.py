@@ -1,4 +1,4 @@
-"""hidraw transport for the Rival 3 Wireless (spec 1.2, spec 2)."""
+"""hidraw transport for the supported mice (spec 1.2, spec 2; models.py)."""
 
 import contextlib
 import fcntl
@@ -8,6 +8,7 @@ import select
 import threading
 import time
 
+from . import models
 from . import protocol as p
 
 COMMAND_GAP_S = 0.030  # spec 2.3
@@ -58,12 +59,12 @@ def _top_level_usage(descriptor):
     return page, usage
 
 
-def find_nodes():
-    """Map usage -> /dev/hidrawN for the 1038:1830 receiver.
+def find_nodes(model=models.DEFAULT):
+    """Map usage -> /dev/hidrawN for the model's receiver.
 
     Interfaces are picked by HID usage, not interface number (spec 1.2).
     """
-    wanted = f"HID_ID=0003:{p.VENDOR_ID:08X}:{p.PRODUCT_ID:08X}"
+    wanted = f"HID_ID=0003:{p.VENDOR_ID:08X}:{model.product_id:08X}"
     nodes = {}
     for sys_path in sorted(glob.glob("/sys/class/hidraw/hidraw*")):
         try:
@@ -78,43 +79,64 @@ def find_nodes():
     return nodes
 
 
-BLUETOOTH_VENDOR_ID = 0x0111  # spec 1.1: the same mouse over Bluetooth
+def find_receiver():
+    """(model, nodes) for the first supported receiver plugged in, or (None, {})."""
+    for model in models.MODELS:
+        nodes = find_nodes(model)
+        if p.COMMAND_USAGE in nodes:
+            return model, nodes
+    return None, {}
+
+
+BLUETOOTH_VENDOR_ID = 0x0111  # spec 1.1, survey A.1: the same mouse over Bluetooth
 BUS_BLUETOOTH = 0x0005
 
 
-def bluetooth_present():
-    """True if the mouse is connected over Bluetooth (no settings channel, spec 7.5)."""
-    wanted = f"HID_ID={BUS_BLUETOOTH:04X}:{BLUETOOTH_VENDOR_ID:08X}:{p.PRODUCT_ID:08X}"
+def bluetooth_model():
+    """The model connected over Bluetooth (no settings channel, spec 7.5), or None."""
+    wanted = {f"HID_ID={BUS_BLUETOOTH:04X}:{BLUETOOTH_VENDOR_ID:08X}:{m.product_id:08X}": m
+              for m in models.MODELS}
     for uevent in glob.glob("/sys/bus/hid/devices/*/uevent"):
         try:
             with open(uevent) as f:
-                if wanted in f.read().upper():
-                    return True
+                text = f.read().upper()
         except OSError:
-            pass
-    return False
+            continue
+        for key, model in wanted.items():
+            if key in text:
+                return model
+    return None
+
+
+def bluetooth_present():
+    return bluetooth_model() is not None
 
 
 def bootloader_present():
-    wanted = f"HID_ID=0003:{p.VENDOR_ID:08X}:{p.BOOTLOADER_PRODUCT_ID:08X}"
+    wanted = [f"HID_ID=0003:{p.VENDOR_ID:08X}:{m.bootloader_id:08X}" for m in models.MODELS]
     for uevent in glob.glob("/sys/class/hidraw/hidraw*/device/uevent"):
         try:
             with open(uevent) as f:
-                if wanted in f.read().upper():
-                    return True
+                text = f.read().upper()
         except OSError:
-            pass
+            continue
+        if any(key in text for key in wanted):
+            return True
     return False
 
 
 class Mouse:
     """Command channel to the receiver and mouse. Thread-safe."""
 
-    def __init__(self, path=None):
+    model = models.DEFAULT  # replaced in __init__ by the receiver found
+
+    def __init__(self, path=None, model=None):
         if path is None:
-            path = find_nodes().get(p.COMMAND_USAGE)
+            model, nodes = find_receiver()
+            path = nodes.get(p.COMMAND_USAGE)
             if path is None:
-                raise NotFound("Rival 3 Wireless receiver not found")
+                raise NotFound("no supported SteelSeries receiver found")
+        self.model = model or models.DEFAULT
         self.path = path
         try:
             self.fd = os.open(path, os.O_RDWR | os.O_NONBLOCK)
@@ -212,13 +234,24 @@ class Mouse:
         return p.decode_version(self._mouse_query(p.command(p.READ | p.OP_VERSION)))
 
     def battery(self):
-        return p.decode_battery(self._mouse_query(p.command(p.OP_BATTERY, 0x01)))
+        battery = p.decode_battery(self._mouse_query(p.command(p.OP_BATTERY, 0x01)))
+        if not self.model.charge_status:
+            # survey S2: unknown whether R[2] is a charge status on this
+            # model, which runs on replaceable cells, so report discharging.
+            battery.status = 0
+        return battery
 
     def cpi_table(self):
+        if self.model.xy_cpi:
+            return p.decode_cpi_table_xy(
+                self._mouse_query(p.command(p.READ | p.OP_CPI_TABLE_XY)))
         return p.decode_cpi_table(self._mouse_query(p.command(p.READ | p.OP_CPI_TABLE)))
 
     def set_cpi_table(self, table):
-        self._mouse_send(p.encode_cpi_table(table))
+        if self.model.xy_cpi:
+            self._mouse_send(p.encode_cpi_table_xy(table))
+        else:
+            self._mouse_send(p.encode_cpi_table(table))
 
     def polling_hz(self):
         level = self._mouse_query(p.command(p.READ | p.OP_POLLING))[0]
@@ -230,14 +263,22 @@ class Mouse:
             time.sleep(3.0)  # spec 2.3
 
     def power(self):
-        return p.decode_power(self._mouse_query(p.command(p.READ | p.OP_POWER)))
+        power = p.decode_power(self._mouse_query(p.command(p.READ | p.OP_POWER)))
+        if self.model.host_high_efficiency:
+            # survey C.1: only the sleep timer is a device setting here.
+            power = p.PowerSettings(False, 0, 0, power.idle_sleep_s)
+        return power
 
     def set_power(self, settings):
         """Write power settings and return once the mouse is back on its link.
 
         Commands sent while the link is down fail, so wait for the drop that
-        every power write causes and then for the reconnect.
+        every power write causes and then for the reconnect. Whether the Gen 2
+        drops its link too is unknown; if it doesn't, this costs POWER_DROP_S.
         """
+        if self.model.host_high_efficiency:
+            # survey C.1: GG sends bytes 1..4 as zero and only the sleep timer.
+            settings = p.PowerSettings(False, 0, 0, settings.idle_sleep_s)
         self._mouse_send(p.encode_power(settings))
         self._wait_for_link(False, POWER_DROP_S)
         if not self._wait_for_link(True, POWER_RELINK_S):
@@ -252,6 +293,8 @@ class Mouse:
         return True
 
     def debounce(self):
+        if not self.model.debounce:
+            raise ValueError(f"the {self.model.name} has no debounce read-back")
         r = self._mouse_query(p.command(p.READ | p.OP_DEBOUNCE))
         return r[0], r[1]
 
@@ -261,16 +304,25 @@ class Mouse:
     def set_wheel(self, wheel):
         self._mouse_send(p.encode_wheel(wheel))
 
+    # Models without lighting (survey C.1) accept and ignore lighting calls,
+    # so a profile made on another mouse still applies everything else.
+
     def set_lighting(self, lighting):
+        if not self.model.lighting:
+            return
         if not self.linked():
             raise MouseUnreachable("mouse is asleep, off or not paired")
         for cmd in p.encode_effect_upload(p.encode_effect_record(lighting)):
             self.send(cmd)
 
     def set_direct_color(self, rgb):
+        if not self.model.lighting:
+            return
         self._mouse_send(p.encode_direct_color(rgb))
 
     def restart_lighting(self):
+        if not self.model.lighting:
+            return
         time.sleep(1.0)  # spec 2.3
         self._mouse_send(p.command(p.OP_RESTART_LIGHTING))
 
@@ -282,7 +334,7 @@ class EventListener:
     """Reads unsolicited notifications from the event interface (spec 2.4)."""
 
     def __init__(self, callback, path=None):
-        self.path = path or find_nodes().get(p.EVENT_USAGE)
+        self.path = path or find_receiver()[1].get(p.EVENT_USAGE)
         if self.path is None:
             raise NotFound("event interface not found")
         self.callback = callback

@@ -1,7 +1,8 @@
-"""Wire protocol for the SteelSeries Rival 3 Wireless (1038:1830).
+"""Wire protocol for the SteelSeries Rival 3 Wireless (1038:1830) and its Gen 2.
 
 Pure encoding and decoding with no I/O. References such as "spec 3.1" point to
-sections of the clean-room specification in ../spec/SPEC.md.
+sections of the clean-room specification in ../spec/SPEC.md, and "survey C.1"
+to the model survey in ../spec/SURVEY.md. models.py says which model uses what.
 """
 
 from dataclasses import dataclass, field
@@ -154,6 +155,35 @@ def decode_cpi_table(r):
         raise ValueError("invalid CPI table response")
     count = min(count, CPI_MAX_PRESETS)
     presets = [code_to_cpi(le16(r, 2 + 2 * i)) for i in range(count)]
+    return CpiTable(presets, min(active, count))
+
+
+# --- CPI with X/Y codes, Rival 3 Wireless Gen 2 (survey C.1) ---
+
+OP_CPI_TABLE_XY = 0x2C
+
+
+def encode_cpi_table_xy(table):
+    """[0x2C, count, active, X codes x5, Y codes x5], one byte per code.
+
+    Mousework has one value per preset, so X and Y are always equal. Unused
+    slots are 0, as for the Rival 3 Wireless (survey S3 leaves this open).
+    """
+    codes = [cpi_to_code(cpi) for cpi in table.presets]
+    codes += [0] * (CPI_MAX_PRESETS - len(codes))
+    return command(OP_CPI_TABLE_XY, len(table.presets), table.active, *codes, *codes)
+
+
+def decode_cpi_table_xy(r):
+    """R[0] count, R[1] active (1-based), R[2..6] X codes, R[7..11] Y codes.
+
+    A preset set elsewhere with different X and Y is reported by its X value.
+    """
+    count, active = r[0], r[1]
+    if count == 0 or active == 0:
+        raise ValueError("invalid CPI table response")
+    count = min(count, CPI_MAX_PRESETS)
+    presets = [code_to_cpi(r[2 + i]) for i in range(count)]
     return CpiTable(presets, min(active, count))
 
 

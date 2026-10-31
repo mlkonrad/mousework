@@ -1,4 +1,4 @@
-"""GTK 4 / libadwaita settings app for the Rival 3 Wireless."""
+"""GTK 4 / libadwaita settings app for the Rival 3 Wireless and its Gen 2."""
 
 import copy
 import os
@@ -15,7 +15,8 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 from . import device, sync  # noqa: E402
 from . import protocol as p  # noqa: E402
 from .top_bar import TopBar  # noqa: E402
-from .profiles import (Profile, Store, apply, import_from_device, reconcile, resend_volatile,
+from .profiles import (Profile, Store, apply, import_from_device, polling_target,
+                       power_settings, reconcile, resend_volatile,
                        set_polling_if_needed)  # noqa: E402
 
 APP_ID = "io.github.mlkonrad.Mousework"
@@ -159,6 +160,7 @@ class Window(Adw.ApplicationWindow):
         self.store = Store()
         self.worker = Worker()
         self.mouse = None
+        self.model = None  # models.Model once a receiver or Bluetooth mouse is seen
         self.linked = False
         self.bluetooth = False
         self._reconciled = False  # restored the active profile after a reconnect
@@ -221,6 +223,7 @@ class Window(Adw.ApplicationWindow):
 
     def _build_device(self):
         group = Adw.PreferencesGroup(title="Device")
+        self.device_group = group
         self.row_link = Adw.ActionRow(title="Connection", subtitle="Searching…")
         self.row_battery = Adw.ActionRow(title="Battery", subtitle="—")
         self.battery_bar = Gtk.LevelBar(min_value=0, max_value=100, valign=Gtk.Align.CENTER,
@@ -523,7 +526,8 @@ class Window(Adw.ApplicationWindow):
         self.reactive_row.set_visible(effect == p.EFFECT_REACTIVE)
         self.reactive_time.set_visible(effect == p.EFFECT_REACTIVE)
         self.speed.set_visible(effect in (p.EFFECT_SHIFT, p.EFFECT_BREATHE))
-        self.stops_group.set_visible(effect in (p.EFFECT_SHIFT, p.EFFECT_BREATHE))
+        self.stops_group.set_visible(self._has_lighting
+                                     and effect in (p.EFFECT_SHIFT, p.EFFECT_BREATHE))
         # spec 8.1: lighting is unavailable in High Efficiency Mode
         hem = self.profile.high_efficiency
         self.lighting_group.set_sensitive(not hem and not self.bluetooth)
@@ -587,8 +591,9 @@ class Window(Adw.ApplicationWindow):
         on = self.hem.get_active()
         self.polling.set_sensitive(not on)
         self._changed("power")
-        if not on:
-            self._dirty.add("polling")  # restore the chosen rate (spec 3.3)
+        # Off restores the chosen rate (spec 3.3); on fixes 125 Hz where the
+        # mode is host-side (survey C.1). polling_target() decides.
+        self._dirty.add("polling")
         self._update_lighting_rows()
 
     def _on_smart(self, *_):
@@ -654,12 +659,14 @@ class Window(Adw.ApplicationWindow):
             profile.validate()
             if "power" in dirty:
                 current = m.power()
-                m.set_power(p.PowerSettings(
-                    profile.high_efficiency,
-                    p.SMART_ILLUMINATION_ON if profile.smart_illumination else 0,
-                    current.idle_lighting_s, profile.sleep_minutes * 60))
-            if "polling" in dirty and not profile.high_efficiency:
-                set_polling_if_needed(m, profile.polling_hz)
+                if m.model.host_high_efficiency and current.idle_sleep_s == \
+                        profile.sleep_minutes * 60:
+                    pass  # only the host-side switch changed; nothing to write
+                else:
+                    m.set_power(power_settings(profile, m.model, current))
+            hz = polling_target(profile, m.model)
+            if "polling" in dirty and hz:
+                set_polling_if_needed(m, hz)
             if "cpi" in dirty:
                 m.set_cpi_table(p.make_cpi_table(profile.cpi_presets, profile.active_cpi))
             if "lighting" in dirty:
@@ -766,11 +773,12 @@ class Window(Adw.ApplicationWindow):
             try:
                 self.mouse = device.Mouse()
             except device.NotFound:
-                if device.bluetooth_present():
-                    return {"bluetooth": True}
+                model = device.bluetooth_model()
+                if model:
+                    return {"bluetooth": True, "model": model}
                 raise
         m = self.mouse
-        state = {"radio": m.radio_status(), "receiver": m.receiver_version()}
+        state = {"radio": m.radio_status(), "receiver": m.receiver_version(), "model": m.model}
         if state["radio"] != p.RADIO_LINKED and device.bluetooth_present():
             state["bluetooth"] = True
             return state
@@ -808,7 +816,27 @@ class Window(Adw.ApplicationWindow):
         self.pair_button.set_sensitive(not on)
         self._update_lighting_rows()
 
+    @property
+    def _has_lighting(self):
+        return self.model is None or self.model.lighting
+
+    def _set_model(self, model):
+        """Show only what this mouse has (survey C.1)."""
+        if model is None or model == self.model:
+            return
+        self.model = model
+        self.lighting_group.set_visible(model.lighting)
+        self.smart.set_visible(model.smart_illumination)
+        self.hem.set_subtitle("Longer battery life; polling fixed at 125 Hz"
+                              if not model.host_high_efficiency else
+                              "Fixes polling at 125 Hz for longer battery life")
+        self.device_group.set_description(
+            model.name + (". Support for this mouse is new and untested on real hardware"
+                          if model.untested else ""))
+        self._update_lighting_rows()
+
     def _show_state(self, state):
+        self._set_model(state.get("model"))
         if state.get("bluetooth"):
             self.linked = False
             self._set_bluetooth(True)

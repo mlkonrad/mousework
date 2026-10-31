@@ -5,6 +5,7 @@ import os
 import time
 from dataclasses import asdict, dataclass, field
 
+from . import models
 from . import protocol as p
 
 CONFIG_DIR = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
@@ -168,22 +169,45 @@ def set_polling_if_needed(mouse, hz):
     mouse.set_polling_hz(hz)
 
 
+def polling_target(profile, model):
+    """The polling rate to write for a profile, or None to leave it alone.
+
+    On the Rival 3 Wireless, high efficiency mode is a device setting that
+    fixes 125 Hz by itself (spec 3.3). On the Gen 2 the host keeps the switch
+    and writes 125 Hz instead (survey C.1).
+    """
+    if profile.high_efficiency:
+        return 125 if model.host_high_efficiency else None
+    return profile.polling_hz
+
+
+def power_settings(profile, model, current):
+    """The power command for a profile; current supplies preserved fields."""
+    if model.host_high_efficiency:
+        return p.PowerSettings(False, 0, 0, profile.sleep_minutes * 60)
+    return p.PowerSettings(
+        high_efficiency=profile.high_efficiency,
+        movement_saving=p.SMART_ILLUMINATION_ON if profile.smart_illumination else 0,
+        idle_lighting_s=current.idle_lighting_s,  # GG preserves this field (spec 3.3)
+        idle_sleep_s=profile.sleep_minutes * 60,
+    )
+
+
 def set_power_if_needed(mouse, profile, current=None):
     """Write the profile's power settings only if the mouse differs.
 
     Any power write, even an unchanged one, makes the mouse drop its radio
     link for several seconds (observed with firmware 1.04).
     """
+    model = models.of(mouse)
     current = current or mouse.power()
-    if (current.high_efficiency, current.smart_illumination, current.idle_sleep_s) == (
+    if model.host_high_efficiency:
+        if current.idle_sleep_s == profile.sleep_minutes * 60:
+            return
+    elif (current.high_efficiency, current.smart_illumination, current.idle_sleep_s) == (
             profile.high_efficiency, profile.smart_illumination, profile.sleep_minutes * 60):
         return
-    mouse.set_power(p.PowerSettings(
-        high_efficiency=profile.high_efficiency,
-        movement_saving=p.SMART_ILLUMINATION_ON if profile.smart_illumination else 0,
-        idle_lighting_s=current.idle_lighting_s,  # GG preserves this field (spec 3.3)
-        idle_sleep_s=profile.sleep_minutes * 60,
-    ))
+    mouse.set_power(power_settings(profile, model, current))
 
 
 def set_cpi_if_needed(mouse, profile):
@@ -204,9 +228,10 @@ def apply(profile, mouse, progress=lambda message: None, save=True):
 
     progress("Power settings")
     set_power_if_needed(mouse, profile, current)
-    if not profile.high_efficiency:
+    hz = polling_target(profile, models.of(mouse))
+    if hz:
         progress("Polling rate")
-        set_polling_if_needed(mouse, profile.polling_hz)
+        set_polling_if_needed(mouse, hz)
 
     progress("Sensitivity")
     set_cpi_if_needed(mouse, profile)
@@ -226,26 +251,30 @@ def apply(profile, mouse, progress=lambda message: None, save=True):
 
 def import_from_device(profile, mouse):
     """Adopt the settings the mouse can report (CPI, polling, power)."""
+    model = models.of(mouse)
     table = mouse.cpi_table()
     power = mouse.power()
     profile.cpi_presets, profile.active_cpi = table.presets, table.active_cpi
-    profile.high_efficiency = power.high_efficiency
-    profile.smart_illumination = power.smart_illumination
+    if not model.host_high_efficiency:  # otherwise a host setting, kept as it is
+        profile.high_efficiency = power.high_efficiency
+        profile.smart_illumination = power.smart_illumination
     profile.sleep_minutes = max(1, min(20, power.idle_sleep_s // 60))
-    if not power.high_efficiency:
+    if not profile.high_efficiency:
         profile.polling_hz = mouse.polling_hz() or profile.polling_hz
 
 
 def apply_changes(target, previous, mouse):
     """Write only the settings that differ from the previous profile, without
     saving to flash, so scripts can switch often without wearing it out."""
+    model = models.of(mouse)
     buttons, wheel = target.bindings()
     power_keys = ("high_efficiency", "smart_illumination", "sleep_minutes")
     if any(getattr(target, k) != getattr(previous, k) for k in power_keys):
         set_power_if_needed(mouse, target)
-    if not target.high_efficiency and (target.polling_hz != previous.polling_hz
-                                       or previous.high_efficiency):
-        set_polling_if_needed(mouse, target.polling_hz)
+    hz = polling_target(target, model)
+    if hz and (hz != polling_target(previous, model)
+               or target.high_efficiency != previous.high_efficiency):
+        set_polling_if_needed(mouse, hz)
     if (target.cpi_presets, target.active_cpi) != (previous.cpi_presets, previous.active_cpi):
         mouse.set_cpi_table(p.make_cpi_table(target.cpi_presets, target.active_cpi))
     if "lighting" in target.managed and target.lighting != previous.lighting:
@@ -262,8 +291,9 @@ def reconcile(profile, mouse):
     differ, so a mouse that already matches isn't knocked off its link.
     """
     set_power_if_needed(mouse, profile)
-    if not profile.high_efficiency:
-        set_polling_if_needed(mouse, profile.polling_hz)
+    hz = polling_target(profile, models.of(mouse))
+    if hz:
+        set_polling_if_needed(mouse, hz)
     set_cpi_if_needed(mouse, profile)
     resend_volatile(profile, mouse)
 

@@ -4,7 +4,7 @@
 Name:           mousework
 Version:        0.1.4
 Release:        1%{?dist}
-Summary:        Settings for the SteelSeries Rival 3 Wireless mouse
+Summary:        Settings for SteelSeries Rival 3 Wireless mice
 
 # The app icon is adapted from Adwaita's input-mouse icon (CC-BY-SA-3.0).
 License:        MIT AND CC-BY-SA-3.0
@@ -35,6 +35,8 @@ A GTK 4 / libadwaita app, a command-line tool and a background service for the
 SteelSeries Rival 3 Wireless (USB 1038:1830): CPI presets, polling rate, power
 settings, wheel lighting, button remapping, named profiles, a host-side motion
 filter (acceleration, deceleration, smoothing) and low-battery notifications.
+The Rival 3 Wireless Gen 2 (USB 1038:1872, no lighting) is also supported, but
+not yet tested on the real mouse.
 
 Mousework is an independent project, not made or supported by SteelSeries.
 
@@ -47,7 +49,7 @@ Supplements:    (%{name} and gnome-shell)
 
 %description gnome-shell-extension
 Shows the battery level, DPI, polling rate and active profile of a SteelSeries
-Rival 3 Wireless in the GNOME Shell top bar, and switches profiles from its
+Rival 3 Wireless or Gen 2 in the GNOME Shell top bar, and switches profiles from its
 menu. Mousework offers to turn it on the first time it starts; the switch
 is also in its App settings.
 

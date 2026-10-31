@@ -160,7 +160,7 @@ over several lines.)
 | Field | Type | Meaning |
 |---|---|---|
 | `version` | integer | Format version, currently `1`. See [Compatibility](#compatibility). |
-| `device` | string | `"SteelSeries Rival 3 Wireless"`, the only supported mouse. Meant for display. |
+| `device` | string | `"SteelSeries Rival 3 Wireless"` or `"SteelSeries Rival 3 Wireless Gen 2"`. Meant for display. `"SteelSeries Rival 3 Wireless"` also when no mouse is found. |
 | `connection` | string | How the mouse is reachable right now. One of the [connection states](#connection-states). This is the field to look at first. |
 | `error` | string or null | A human-readable explanation when something went wrong, for example `"no permission to open /dev/hidraw2; install the udev rule"`. Show it in a tooltip or log it, but don't parse it: the wording can change in any release. |
 | `battery` | object or null | The battery, or `null` when the level isn't known. |
@@ -176,7 +176,7 @@ over several lines.)
 | `polling_hz` | integer or null | Polling rate: `125`, `250`, `500` or `1000`. Always `125` while `power.high_efficiency` is on. |
 | `power` | object or null | Power-saving settings. |
 | `power.high_efficiency` | boolean | High efficiency mode, for longer battery life. The polling rate is fixed at 125 Hz while it's on. |
-| `power.smart_illumination` | boolean | Smart illumination, the power-saving option for the wheel lighting. |
+| `power.smart_illumination` | boolean | Smart illumination, the power-saving option for the wheel lighting. Always `false` on the Rival 3 Wireless Gen 2, which has no lighting. |
 | `power.sleep_minutes` | integer, 1–20 | Minutes without use before the mouse goes to sleep. |
 | `profile` | object or null | The active Mousework profile. Read from `~/.config/mousework/profiles.json`, so it is available whatever the connection. `null` only if that file can't be read. |
 | `profile.active` | string | Name of the active profile, as shown by `mousework profile current`. Before the first profile is created it is `"Default"`. |

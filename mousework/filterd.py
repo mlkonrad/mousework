@@ -16,7 +16,7 @@ import time
 import evdev
 from evdev import ecodes as e
 
-from . import battery, changes, device
+from . import battery, changes, device, models
 from . import protocol as p
 from .motion import MotionFilter
 from .profiles import CONFIG_FILE, Store
@@ -53,7 +53,7 @@ def find_mouse():
         except OSError:
             continue
         caps = dev.capabilities()
-        if (dev.info.vendor == p.VENDOR_ID and dev.info.product == p.PRODUCT_ID
+        if (dev.info.vendor == p.VENDOR_ID and dev.info.product in models.BY_PRODUCT_ID
                 and e.REL_X in caps.get(e.EV_REL, [])):
             return dev
         dev.close()
@@ -101,12 +101,16 @@ class Service:
         self.battery = battery.BatteryMonitor()
         self._battery_lock = threading.Lock()
         self._listener = None
+        self._settle_s = 0.0  # battery_settle_s of the model last seen
+        self._linked_at = None  # monotonic time of the last link-up event
 
     def stop(self, *_):
         self.running = False
 
     def on_event(self, code, value, raw):
         self.settings.on_event(code, value, raw)
+        if code == p.EVENT_LINK and value == 1:  # spec 2.4
+            self._linked_at = time.monotonic()
         if code == p.EVENT_BATTERY:  # spec 2.4
             self.battery_level(value)
         if code in CHANGE_EVENTS:
@@ -124,8 +128,18 @@ class Service:
         self.changed("settings")
         return True
 
+    def battery_settling(self, now=None):
+        """True right after a link-up, while the level isn't trusted yet (survey C.1)."""
+        if self._linked_at is None or not self._settle_s:
+            return False
+        now = time.monotonic() if now is None else now
+        return now - self._linked_at < self._settle_s
+
     def battery_level(self, level):
         if not self.settings.battery_warnings:
+            return
+        if self.battery_settling():
+            debug(f"battery {level} % right after link-up: ignored")
             return
         with self._battery_lock:
             warning = self.battery.update(level)
@@ -149,6 +163,7 @@ class Service:
                 next_poll = time.monotonic() + BATTERY_POLL_S
                 try:
                     with device.Mouse() as m:
+                        self._settle_s = m.model.battery_settle_s
                         if m.linked():  # don't query a sleeping or Bluetooth mouse
                             self.battery_level(m.battery().level)
                 except device.DeviceError:

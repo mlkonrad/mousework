@@ -84,6 +84,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.5" date="2026-10-31">
+      <description>
+        <p>Mousework now also supports the SteelSeries Rival 3 Wireless Gen 2.
+        This support is untested: it was written without the mouse at hand,
+        so please report how it works for you. The Gen 2 has no lighting, and
+        high efficiency mode is kept by Mousework, which sets 125 Hz polling
+        while it is on.</p>
+        <p>The app and mousework status now show which mouse is connected.</p>
+      </description>
+    </release>
     <release version="0.1.4" date="2026-10-31">
       <description>
         <p>Maintenance release: new versions now reach the Fedora repository

@@ -7,10 +7,24 @@ import GLib from 'gi://GLib';
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 
-// GNOME Shell's PATH usually doesn't include ~/.local/bin.
-const MOUSEWORK = GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'mousework']);
+// Where install.sh puts the CLI. GNOME Shell's PATH usually doesn't include
+// ~/.local/bin, so look there by name.
+const USER_MOUSEWORK = GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'mousework']);
 
 const TIMEOUT_S = 10;
+
+/**
+ * Find the CLI on every call, so installing or removing Mousework takes effect
+ * without restarting GNOME Shell. A user install wins over a distro package
+ * (in /usr/bin), as its systemd unit does.
+ *
+ * @returns {string} the path to run
+ */
+function mouseworkPath() {
+    if (GLib.file_test(USER_MOUSEWORK, GLib.FileTest.IS_EXECUTABLE))
+        return USER_MOUSEWORK;
+    return GLib.find_program_in_path('mousework') ?? '/usr/bin/mousework';
+}
 
 /**
  * Run `mousework status --json` (format: docs/json.md in the Mousework repo).
@@ -19,7 +33,7 @@ const TIMEOUT_S = 10;
  * @returns {Promise<object|null>} the status object, or null if it couldn't be read
  */
 export async function readStatus(cancellable) {
-    const proc = Gio.Subprocess.new([MOUSEWORK, 'status', '--json'],
+    const proc = Gio.Subprocess.new([mouseworkPath(), 'status', '--json'],
         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
     let timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, TIMEOUT_S, () => {
         timeoutId = 0;
@@ -54,7 +68,7 @@ export async function readStatus(cancellable) {
  * @throws {Error} with Mousework's explanation if the switch failed
  */
 export async function switchProfile(name, cancellable) {
-    const proc = Gio.Subprocess.new([MOUSEWORK, 'profile', 'use', name],
+    const proc = Gio.Subprocess.new([mouseworkPath(), 'profile', 'use', name],
         Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_PIPE);
     const [, stderr] = await proc.communicate_utf8_async(null, cancellable);
     if (!proc.get_successful())

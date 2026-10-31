@@ -1,7 +1,7 @@
 {
     "uuid": "mousework@mlkonrad.github.com",
     "name": "Mousework Indicator",
-    "description": "Shows the battery level, DPI, polling rate and profile of a SteelSeries Rival 3 Wireless in the top bar while it is connected through its USB receiver.\n\nNeeds Mousework (https://github.com/mlkonrad/mousework) installed in ~/.local/bin.",
+    "description": "Shows the battery level, DPI, polling rate and profile of a SteelSeries Rival 3 Wireless in the top bar while it is connected through its USB receiver.\n\nNeeds Mousework (https://github.com/mlkonrad/mousework).",
     "shell-version": ["49", "50"],
     "settings-schema": "org.gnome.shell.extensions.mousework",
     "url": "https://github.com/mlkonrad/mousework",

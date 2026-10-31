@@ -4,7 +4,7 @@ After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
-ExecStart=%h/.local/bin/mousework-filter
+ExecStart=/usr/bin/mousework-filter
 Restart=on-failure
 RestartSec=3
 

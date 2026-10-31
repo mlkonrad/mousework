@@ -184,6 +184,11 @@ class DiscoveryTests(unittest.TestCase):
         notes = [r.get("note", "") for r in reports]
         self.assertEqual(sum("nothing sent" in n for n in notes), 3)
 
+    def test_vanished_node_is_reported_not_raised(self):
+        devices = [(3, 0x1038, 0x1830, "/dev/hidraw-missing", (0xFFC0, 1))]
+        reports = probe.probe(devices)  # the real device.Mouse opener
+        self.assertIn("is gone", reports[0]["error"])
+
     def test_identity_without_a_command_node(self):
         devices = [(3, 0x1038, 0x1836, "/dev/hidraw2", (0x0001, 2))]
         reports = probe.probe(devices, lambda path: self.fail("opened"))

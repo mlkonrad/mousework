@@ -142,6 +142,10 @@ class Mouse:
             self.fd = os.open(path, os.O_RDWR | os.O_NONBLOCK)
         except PermissionError as e:
             raise DeviceError(f"no permission to open {path}; install the udev rule") from e
+        except FileNotFoundError as e:  # unplugged since the scan, or no /dev node
+            raise NotFound(f"{path} is gone") from e
+        except OSError as e:
+            raise DeviceError(f"cannot open {path}: {e}") from e
         self._lock = threading.Lock()
         self._last = 0.0
 

@@ -2,7 +2,7 @@
 %global app_id io.github.mlkonrad.Mousework
 
 Name:           mousework
-Version:        0.1.5
+Version:        0.1.6
 Release:        1%{?dist}
 Summary:        Settings for SteelSeries Rival 3 Wireless mice
 
@@ -124,6 +124,11 @@ udevadm trigger --subsystem-match=hidraw --subsystem-match=input --subsystem-mat
 %{_datadir}/glib-2.0/schemas/org.gnome.shell.extensions.mousework.gschema.xml
 
 %changelog
+* Sat Oct 31 2026 Marlon Konrad <marlonk@gmail.com> - 0.1.6-1
+- Add mousework probe: read-only identification of SteelSeries mice that
+  Mousework doesn't support yet, for reporting them
+- Report a receiver that disappears while it is opened instead of crashing
+
 * Sat Oct 31 2026 Marlon Konrad <marlonk@gmail.com> - 0.1.5-1
 - Support the SteelSeries Rival 3 Wireless Gen 2 (USB 1038:1872). This
   support is untested: it was written from the specification without the

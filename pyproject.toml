@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mousework"
-version = "0.1.5"
+version = "0.1.6"
 description = "Settings for SteelSeries Rival 3 Wireless mice on Linux"
 requires-python = ">=3.11"
 license = "MIT"

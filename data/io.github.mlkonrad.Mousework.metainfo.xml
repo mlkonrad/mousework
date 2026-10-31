@@ -84,6 +84,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.6" date="2026-10-31">
+      <description>
+        <p>The new mousework probe command identifies SteelSeries mice that
+        Mousework can't configure yet, such as the Aerox, Rival 5, Prime and
+        Sensei Pro families. It only reads from the mouse and never changes a
+        setting. Owners can paste its output into a mouse report to help add
+        support.</p>
+      </description>
+    </release>
     <release version="0.1.5" date="2026-10-31">
       <description>
         <p>Mousework now also supports the SteelSeries Rival 3 Wireless Gen 2.

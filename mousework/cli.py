@@ -304,6 +304,16 @@ def cmd_events(args):
         pass
 
 
+def cmd_probe(args):
+    from . import probe
+    reports = probe.probe()
+    if args.json:
+        import json
+        print(json.dumps({"mousework": probe._version(), "devices": reports}, indent=2))
+    else:
+        print(probe.format_text(reports))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="mousework",
                                  description="Settings for the SteelSeries Rival 3 Wireless "
@@ -392,6 +402,11 @@ def main(argv=None):
 
     sub.add_parser("pair", help="pair the mouse with the receiver").set_defaults(func=cmd_pair)
     sub.add_parser("events", help="print live mouse events").set_defaults(func=cmd_events)
+
+    sp = sub.add_parser("probe", help="identify SteelSeries mice with read-only queries, "
+                                      "for reporting a model Mousework doesn't support yet")
+    sp.add_argument("--json", action="store_true", help="machine-readable output")
+    sp.set_defaults(func=cmd_probe)
 
     args = ap.parse_args(argv)
     try:

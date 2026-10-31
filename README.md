@@ -93,7 +93,29 @@ differences, as far as Mousework is concerned:
 - Not implemented: the mouse's wireless power settings (link redundancy and
   Bluetooth boost). Mousework leaves them as they are.
 
-None of this has been tried on the real mouse yet.
+None of this has been tried on the real mouse yet. If you have one, please
+[report how it works](#other-steelseries-mice).
+
+## Other SteelSeries mice
+
+Mousework can't configure other SteelSeries mice yet, but it can identify
+many of them so their owners can help add support:
+
+```sh
+mousework probe            # or: sudo mousework probe
+```
+
+The probe only reads: it asks for the firmware version, the link and battery
+state, and where the format is known, the CPI and polling settings. It never
+sends a command that changes a setting, and it sends nothing to a device it
+doesn't recognise, to a mouse in its bootloader, or over Bluetooth. It knows
+the Rival 3 Wireless family, the Aerox 3/5/9 (wired and wireless), Rival 5,
+Prime Mini, Prime Wireless, Rival 3 Gen 2 and the Sensei Pro / Rival Pro
+series. The udev rule only gives access to the supported mice, so for the
+others run it with `sudo`.
+
+Please paste the output into a
+[mouse report](https://github.com/mlkonrad/mousework/issues/new?template=other-mouse.yml).
 
 ## Install
 
@@ -172,6 +194,7 @@ mousework profile next                         # or previous; handy for a keyboa
 mousework profile use Gaming --temporary       # for scripts: only differences, no flash save
 mousework profile current
 mousework events                               # watch CPI button, link and battery events
+mousework probe                                # identify a SteelSeries mouse (read-only)
 mousework battery-warnings off                 # or on
 ```
 

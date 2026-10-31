@@ -1,0 +1,50 @@
+name: Another SteelSeries mouse
+description: Report a SteelSeries mouse Mousework doesn't support yet, or how the untested Rival 3 Wireless Gen 2 support works for you
+title: "Mouse report: "
+labels: ["mouse report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! Reports like this are how Mousework learns whether its
+        specification matches real mice. `mousework probe` only reads from
+        the mouse: it sends no command that changes a setting.
+  - type: input
+    id: model
+    attributes:
+      label: Mouse model
+      description: As printed on the box or the bottom of the mouse.
+      placeholder: Aerox 3 Wireless
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: How was it connected while you ran the probe?
+      options:
+        - 2.4 GHz receiver / dongle
+        - USB cable
+        - Base station
+        - Bluetooth
+    validations:
+      required: true
+  - type: textarea
+    id: probe
+    attributes:
+      label: Output of `mousework probe`
+      description: |
+        Wake the mouse first (move it). If the output says "no permission",
+        run `sudo mousework probe`: the udev rule only covers supported mice.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings shown by SteelSeries GG (optional)
+      description: If you also use GG, the CPI presets, polling rate and sleep timer it shows help check the decoded values.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: For the Rival 3 Wireless Gen 2, what worked and what didn't.

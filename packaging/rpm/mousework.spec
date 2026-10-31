@@ -2,7 +2,7 @@
 %global app_id io.github.mlkonrad.Mousework
 
 Name:           mousework
-Version:        0.1.2
+Version:        0.1.3
 Release:        1%{?dist}
 Summary:        Settings for the SteelSeries Rival 3 Wireless mouse
 
@@ -122,6 +122,10 @@ udevadm trigger --subsystem-match=hidraw --subsystem-match=input --subsystem-mat
 %{_datadir}/glib-2.0/schemas/org.gnome.shell.extensions.mousework.gschema.xml
 
 %changelog
+* Sat Oct 31 2026 Marlon Konrad <marlonk@gmail.com> - 0.1.3-1
+- Add AppStream metainfo with screenshots, so software centers can show
+  Mousework
+
 * Sat Oct 31 2026 Marlon Konrad <marlonk@gmail.com> - 0.1.2-1
 - Offer to turn on the GNOME top-bar indicator on first start, and add a
   switch for it to the app

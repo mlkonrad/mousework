@@ -36,9 +36,18 @@ mousework status --json                              # the whole object
 mousework status --json | jq '.battery.level'        # 62, or null if unknown
 ```
 
-Mousework installs its commands in `~/.local/bin`. Desktop shells don't always
-have that directory in their `PATH` (GNOME Shell on Fedora doesn't), so from
-an extension or widget call it by its full path: `~/.local/bin/mousework`.
+Where the `mousework` command lives depends on how you installed it:
+
+| Installed with | Command |
+|---|---|
+| `install.sh` | `~/.local/bin/mousework` |
+| a distribution package (RPM, AUR, ...) | `/usr/bin/mousework` |
+
+Desktop shells don't always have `~/.local/bin` in their `PATH` (GNOME Shell
+on Fedora doesn't), so from an extension or widget call it by its full path.
+The examples below use `~/.local/bin/mousework`; with a package, use
+`/usr/bin/mousework` or just `mousework` instead. The Python and GJS examples
+find it either way.
 
 ## How it works
 
@@ -365,8 +374,10 @@ a good integration does:
      data engine, many applet frameworks): run `mousework status --json` once,
      then `mousework status --json --wait` again each time it returns.
    - None of these: poll `mousework status --json` every one to five minutes.
-2. **Run it by its full path**, `~/.local/bin/mousework`, because desktop
-   shells often don't have `~/.local/bin` in their `PATH`.
+2. **Run it by its full path**: `~/.local/bin/mousework` after `install.sh`,
+   because desktop shells often don't have `~/.local/bin` in their `PATH`,
+   or `/usr/bin/mousework` from a distribution package. To support both,
+   try `~/.local/bin/mousework` first and fall back to `PATH`.
 3. **Never block the user interface.** Run the command asynchronously, with a
    timeout of about 10 seconds. A frozen desktop shell freezes the whole
    desktop.
@@ -456,9 +467,15 @@ Standard library only, Python 3.8 or later:
 ```python
 import json
 import os
+import shutil
 import subprocess
 
-MOUSEWORK = os.path.expanduser("~/.local/bin/mousework")
+# install.sh puts it in ~/.local/bin, distribution packages in /usr/bin.
+USER_MOUSEWORK = os.path.expanduser("~/.local/bin/mousework")
+if os.access(USER_MOUSEWORK, os.X_OK):
+    MOUSEWORK = USER_MOUSEWORK
+else:
+    MOUSEWORK = shutil.which("mousework") or "/usr/bin/mousework"
 
 
 def mouse_status():
@@ -592,11 +609,14 @@ import GLib from 'gi://GLib';
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 
-// GNOME Shell's PATH usually doesn't include ~/.local/bin.
-export const COMMAND = [
-    GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'mousework']),
-    'status', '--json',
-];
+// install.sh puts it in ~/.local/bin, which GNOME Shell's PATH usually
+// doesn't include; distribution packages put it in /usr/bin.
+const USER_MOUSEWORK = GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'mousework']);
+const MOUSEWORK = GLib.file_test(USER_MOUSEWORK, GLib.FileTest.IS_EXECUTABLE)
+    ? USER_MOUSEWORK
+    : GLib.find_program_in_path('mousework') ?? '/usr/bin/mousework';
+
+export const COMMAND = [MOUSEWORK, 'status', '--json'];
 
 /** Resolve to the status object, or null if it couldn't be read. */
 export async function readStatus(cancellable = null, command = COMMAND) {

@@ -6,7 +6,7 @@ from mousework.profiles import Profile
 
 class CpiTests(unittest.TestCase):
     def test_decode_device_sample(self):
-        # §3.1 device sample
+        # spec 3.1 device sample
         r = bytes.fromhex("05 03 04 00 09 00 0d 00 12 00 17 00").ljust(64, b"\0")
         table = p.decode_cpi_table(r)
         self.assertEqual(table.presets, [400, 800, 1200, 1600, 2000])
@@ -34,7 +34,7 @@ class CpiTests(unittest.TestCase):
 
 class PowerTests(unittest.TestCase):
     def test_device_sample(self):
-        # §3.3: 01 64 2c01 b004
+        # spec 3.3: 01 64 2c01 b004
         r = bytes.fromhex("01 64 2c 01 b0 04").ljust(64, b"\0")
         power = p.decode_power(r)
         self.assertEqual(power, p.PowerSettings(True, 100, 300, 1200))

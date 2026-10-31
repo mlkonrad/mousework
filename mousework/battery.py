@@ -1,4 +1,4 @@
-"""Low-battery notifications (our addition; GG has none for this mouse, §7.4)."""
+"""Low-battery notifications (our addition; GG has none for this mouse, spec 7.4)."""
 
 LOW = 15
 CRITICAL = 5
@@ -13,7 +13,7 @@ class BatteryMonitor:
 
     def update(self, level):
         if level is None or not 0 <= level <= 100:
-            return None  # unknown (101 = Bluetooth, §5)
+            return None  # unknown (101 = Bluetooth, spec 5)
         for threshold in (LOW, CRITICAL):
             if level >= threshold + REARM_MARGIN:
                 self.warned.discard(threshold)  # battery replaced

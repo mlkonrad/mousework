@@ -20,7 +20,7 @@ from .profiles import (Profile, Store, apply, import_from_device, reconcile, res
 
 APP_ID = "io.github.mlkonrad.Mousework"
 APPLY_DELAY_MS = 600
-POLL_INTERVAL_S = 5  # §1.4, §5
+POLL_INTERVAL_S = 5  # spec 1.4, spec 5
 
 ACTIONS = [
     ("left", "Left click"), ("right", "Right click"), ("middle", "Middle click"),
@@ -524,14 +524,14 @@ class Window(Adw.ApplicationWindow):
         self.reactive_time.set_visible(effect == p.EFFECT_REACTIVE)
         self.speed.set_visible(effect in (p.EFFECT_SHIFT, p.EFFECT_BREATHE))
         self.stops_group.set_visible(effect in (p.EFFECT_SHIFT, p.EFFECT_BREATHE))
-        # §8.1: lighting is unavailable in High Efficiency Mode
+        # spec 8.1: lighting is unavailable in High Efficiency Mode
         hem = self.profile.high_efficiency
         self.lighting_group.set_sensitive(not hem and not self.bluetooth)
         self.stops_group.set_sensitive(not hem and not self.bluetooth)
         if hem:
             note = "Unavailable in high efficiency mode"
         elif effect == p.EFFECT_REACTIVE and self.profile.smart_illumination:
-            # Verified on device: smart illumination suppresses click flashes (§3.4.3)
+            # Verified on device: smart illumination suppresses click flashes (spec 3.4.3)
             note = "Click flashes only appear with smart illumination turned off"
         else:
             note = None
@@ -588,7 +588,7 @@ class Window(Adw.ApplicationWindow):
         self.polling.set_sensitive(not on)
         self._changed("power")
         if not on:
-            self._dirty.add("polling")  # restore the chosen rate (§3.3)
+            self._dirty.add("polling")  # restore the chosen rate (spec 3.3)
         self._update_lighting_rows()
 
     def _on_smart(self, *_):
@@ -794,11 +794,11 @@ class Window(Adw.ApplicationWindow):
                     reconcile(copy.deepcopy(self.profile), m)
                 state["cpi"] = m.cpi_table()
             elif on_connect or not self.linked:
-                resend_volatile(self.profile, m)  # §7.2
+                resend_volatile(self.profile, m)  # spec 7.2
         return state
 
     def _set_bluetooth(self, on):
-        """§7.5: over Bluetooth nothing can be configured, as in GG."""
+        """spec 7.5: over Bluetooth nothing can be configured, as in GG."""
         if on == self.bluetooth:
             return
         self.bluetooth = on
@@ -852,7 +852,7 @@ class Window(Adw.ApplicationWindow):
         return False
 
     def _adopt_cpi(self, table):
-        """The device is the source of truth for CPI (§7.3)."""
+        """The device is the source of truth for CPI (spec 7.3)."""
         pr = self.profile
         if table.presets != sorted(set(pr.cpi_presets)) or table.active_cpi != pr.active_cpi:
             pr.cpi_presets = table.presets
@@ -867,7 +867,7 @@ class Window(Adw.ApplicationWindow):
             call_once(self._poll)
 
     def _poll(self):
-        # GG polls only while focused (§1.4); we poll whenever the window is
+        # GG polls only while focused (spec 1.4); we poll whenever the window is
         # open so switching to Bluetooth or back shows up without a click.
         if self.get_mapped():
             self.worker.run(self._read_state, done=self._show_state, error=self._device_error,
@@ -905,7 +905,7 @@ class Window(Adw.ApplicationWindow):
             if m.radio_status() not in p.RADIO_UNLINKED:
                 return "Mouse is already paired"
             m.pair()
-            hits, deadline = 0, time.monotonic() + 20  # §7.1
+            hits, deadline = 0, time.monotonic() + 20  # spec 7.1
             while time.monotonic() < deadline:
                 time.sleep(2)
                 hits = hits + 1 if m.radio_status() == p.RADIO_LINKED else 0

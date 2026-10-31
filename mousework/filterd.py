@@ -1,6 +1,6 @@
 """Motion filter service: grabs the mouse and re-emits filtered motion.
 
-Acceleration, deceleration and smoothing are host-side features (§3.7), so
+Acceleration, deceleration and smoothing are host-side features (spec 3.7), so
 the mouse's evdev node is grabbed and its events are copied to a uinput
 device with REL_X/REL_Y rewritten by motion.MotionFilter. When every level
 is 0 the mouse is left alone.
@@ -89,7 +89,7 @@ class Settings:
         return True
 
     def on_event(self, code, value, _raw):
-        # §2.4: the on-mouse CPI button reports the new 1-based preset
+        # spec 2.4: the on-mouse CPI button reports the new 1-based preset
         if code == p.EVENT_CPI_CHANGED and 1 <= value <= len(self.presets):
             self.cpi = self.presets[value - 1]
 
@@ -107,7 +107,7 @@ class Service:
 
     def on_event(self, code, value, raw):
         self.settings.on_event(code, value, raw)
-        if code == p.EVENT_BATTERY:  # §2.4
+        if code == p.EVENT_BATTERY:  # spec 2.4
             self.battery_level(value)
         if code in CHANGE_EVENTS:
             self.changed(CHANGE_EVENTS[code])
@@ -137,7 +137,7 @@ class Service:
                 log(f"notification failed: {err}")
 
     def _watch_device(self):
-        """Keep the event listener alive and poll the battery (§5)."""
+        """Keep the event listener alive and poll the battery (spec 5)."""
         next_poll = 0.0
         while self.running:
             if self._listener is None or not self._listener.alive:

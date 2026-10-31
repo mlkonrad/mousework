@@ -1,7 +1,7 @@
 """Wire protocol for the SteelSeries Rival 3 Wireless (1038:1830).
 
-Pure encoding and decoding with no I/O. Section numbers (§) refer to the
-clean-room specification in ../spec/SPEC.md.
+Pure encoding and decoding with no I/O. References such as "spec 3.1" point to
+sections of the clean-room specification in ../spec/SPEC.md.
 """
 
 from dataclasses import dataclass, field
@@ -10,12 +10,12 @@ VENDOR_ID = 0x1038
 PRODUCT_ID = 0x1830
 BOOTLOADER_PRODUCT_ID = 0x1831
 
-COMMAND_USAGE = (0xFFC0, 0x0001)  # §1.2, interface 3
-EVENT_USAGE = (0xFF00, 0x0001)  # §1.2, interface 2
+COMMAND_USAGE = (0xFFC0, 0x0001)  # spec 1.2, interface 3
+EVENT_USAGE = (0xFF00, 0x0001)  # spec 1.2, interface 2
 
 REPORT_LEN = 64
 
-# Opcode bits (§2.2)
+# Opcode bits (spec 2.2)
 READ = 0x80
 RECEIVER = 0x40
 
@@ -41,12 +41,12 @@ OP_RADIO_STATUS = 0x28
 OP_PAIR = 0x31
 OP_WIRELESS_RESET = 0x33
 
-# Event-channel codes (§2.4)
+# Event-channel codes (spec 2.4)
 EVENT_CPI_CHANGED = 0x16
 EVENT_LINK = 0x28
 EVENT_BATTERY = 0x2A
 
-# Radio status (§1.4)
+# Radio status (spec 1.4)
 RADIO_UNLINKED = (0, 1)
 RADIO_LINKED = 4
 RADIO_BLUETOOTH = 5
@@ -59,7 +59,7 @@ BUFFER_CHUNK = 48
 
 
 def command(opcode, *data):
-    """Build a 64-byte command payload, zero-padded (§2.1)."""
+    """Build a 64-byte command payload, zero-padded (spec 2.1)."""
     payload = bytes([opcode]) + bytes(data)
     if len(payload) > REPORT_LEN:
         raise ValueError("command longer than one report")
@@ -78,7 +78,7 @@ def le16(data, offset):
     return int.from_bytes(data[offset:offset + 2], "little")
 
 
-# --- CPI (§3.1) ---
+# --- CPI (spec 3.1) ---
 
 CPI_MIN = 100
 CPI_MAX = 18000
@@ -129,7 +129,7 @@ class CpiTable:
 
 
 def make_cpi_table(presets, active_cpi):
-    """Normalise presets the way GG does: distinct, sorted ascending (§3.1)."""
+    """Normalise presets the way GG does: distinct, sorted ascending (spec 3.1)."""
     values = sorted(set(presets))
     if not 1 <= len(values) <= CPI_MAX_PRESETS:
         raise ValueError(f"need 1..{CPI_MAX_PRESETS} distinct CPI presets")
@@ -157,7 +157,7 @@ def decode_cpi_table(r):
     return CpiTable(presets, min(active, count))
 
 
-# --- Polling rate (§3.2) ---
+# --- Polling rate (spec 3.2) ---
 
 POLLING_LEVELS = {0: 1000, 1: 500, 2: 250, 3: 125}
 POLLING_HZ = {hz: level for level, hz in POLLING_LEVELS.items()}
@@ -169,7 +169,7 @@ def encode_polling(hz):
     return command(OP_POLLING, POLLING_HZ[hz])
 
 
-# --- Power management (§3.3) ---
+# --- Power management (spec 3.3) ---
 
 SLEEP_MIN_S = 60
 SLEEP_MAX_S = 1200
@@ -199,7 +199,7 @@ def decode_power(r):
     return PowerSettings(bool(r[0]), r[1], le16(r, 2), le16(r, 4))
 
 
-# --- Battery and versions (§5, §6.1) ---
+# --- Battery and versions (spec 5, spec 6.1) ---
 
 @dataclass
 class Battery:
@@ -219,7 +219,7 @@ def decode_version(r):
     return f"{r[0]}.{r[1]:02d}"
 
 
-# --- Buttons (§3.5) ---
+# --- Buttons (spec 3.5) ---
 
 BUTTON_NAMES = ("left", "right", "middle", "back", "forward", "cpi")
 WHEEL_NAMES = ("wheel-up", "wheel-down")
@@ -308,7 +308,7 @@ def parse_action(text):
             raise ValueError(f"unknown key {unknown[0]!r}")
         if len(keys) > 1 or len(mods) > 3 or not parts:
             raise ValueError("a key binding is up to 3 modifiers plus 1 key")
-        # Modifiers first (§3.5 marks this order as inferred).
+        # Modifiers first (spec 3.5 marks this order as inferred).
         usages = mods + keys
         return Binding(FN_KEYBOARD, tuple(usages + [0] * (4 - len(usages))))
     raise ValueError(f"unknown action {text!r}")
@@ -348,7 +348,7 @@ def encode_wheel(wheel):
     return command(OP_WHEEL, *b"".join(b.encode() for b in slots))
 
 
-# --- Lighting (§3.4) ---
+# --- Lighting (spec 3.4) ---
 
 EFFECT_STEADY = "steady"
 EFFECT_SHIFT = "shift"
@@ -382,12 +382,12 @@ class Lighting:
 
 
 def _section_len(delta):
-    """§3.4.3 R0: truncate, do not round (so 100 % gives 254)."""
+    """spec 3.4.3 R0: truncate, do not round (so 100 % gives 254)."""
     return max(0, min(255, int(delta * 2.55)))
 
 
 def _min_speed(stops):
-    return 66 * len(stops)  # §3.4.3 R1
+    return 66 * len(stops)  # spec 3.4.3 R1
 
 
 def _sections(lighting):
@@ -415,7 +415,7 @@ def _sections(lighting):
         sections.append((stops[0].color, _section_len(100 - prev)))
         return stops[0].color, sections, OVERFLOW_WRAP, speed * 10, 0
     if lighting.effect == EFFECT_BREATHE:
-        # §3.4.3: colour/black pairs, gaps halved with integer division (R0b)
+        # spec 3.4.3: colour/black pairs, gaps halved with integer division (R0b)
         speed = max(lighting.speed, _min_speed(stops))
         positions = [s.position for s in stops]
         sections, prev = [], 0
@@ -433,7 +433,7 @@ def _sections(lighting):
 
 
 def encode_effect_record(lighting):
-    """Build the 92-byte stored-effect record (§3.4.2). Waves are not used."""
+    """Build the 92-byte stored-effect record (spec 3.4.2). Waves are not used."""
     start, sections, overflow, duration, mask = _sections(lighting)
     if len(sections) > MAX_SECTIONS:
         raise ValueError("too many lighting sections")
@@ -449,7 +449,7 @@ def encode_effect_record(lighting):
 
 
 def encode_effect_upload(record):
-    """Commands to upload and commit an effect record, then bind it (§3.4.1)."""
+    """Commands to upload and commit an effect record, then bind it (spec 3.4.1)."""
     cmds = []
     for offset in range(0, len(record), BUFFER_CHUNK):
         chunk = record[offset:offset + BUFFER_CHUNK]

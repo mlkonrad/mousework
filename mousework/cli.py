@@ -137,7 +137,7 @@ def cmd_power(args):
     def write(m, pr):
         set_power_if_needed(m, pr)
         if not pr.high_efficiency and args.high_efficiency == "off":
-            set_polling_if_needed(m, pr.polling_hz)  # restore the chosen rate (§3.3)
+            set_polling_if_needed(m, pr.polling_hz)  # restore the chosen rate (spec 3.3)
     _edit_profile(args, change, write)
 
 
@@ -258,7 +258,7 @@ def cmd_pair(args):
             return
         print("Put the mouse in pairing mode now…")
         m.pair()
-        hits, deadline = 0, time.monotonic() + 20  # §7.1
+        hits, deadline = 0, time.monotonic() + 20  # spec 7.1
         while time.monotonic() < deadline:
             time.sleep(2)
             hits = hits + 1 if m.radio_status() == p.RADIO_LINKED else 0

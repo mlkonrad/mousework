@@ -12,7 +12,7 @@ def run(f, reports, dt):
 
 class IsqrtTests(unittest.TestCase):
     def test_quirks(self):
-        # §3.7.0: one above floor(sqrt) just below some perfect squares
+        # spec 3.7.0: one above floor(sqrt) just below some perfect squares
         self.assertEqual([isqrt(n) for n in (2400, 2600, 9800, 10200)], [49, 51, 99, 101])
         self.assertEqual([isqrt(n) for n in (0, 100, 2500, 5200)], [0, 10, 50, 72])
 
@@ -22,7 +22,7 @@ def gg(**kw):
 
 
 class AccelTests(unittest.TestCase):
-    """Spec §3.7.1 vectors (GG arithmetic)."""
+    """Spec 3.7.1 vectors (GG arithmetic)."""
 
     def test_a1(self):
         self.assertEqual(run(gg(accel=5, cpi=800), [(10, 0)], 10), [(15, 0)])
@@ -110,7 +110,7 @@ class SmoothStyleTests(unittest.TestCase):
 
 
 class GgDecelTests(unittest.TestCase):
-    """Spec §3.7.1 vectors A4-A6 with GG's single-step deceleration."""
+    """Spec 3.7.1 vectors A4-A6 with GG's single-step deceleration."""
 
     def f(self, **kw):
         return MotionFilter(cpi=800, style=STYLE_GG, **kw)
@@ -132,7 +132,7 @@ class GgDecelTests(unittest.TestCase):
 
 
 class SmoothingTests(unittest.TestCase):
-    """Spec §3.7.2 vectors."""
+    """Spec 3.7.2 vectors."""
 
     def check(self, level, dt, reports, expected):
         self.assertEqual(run(gg(smoothing=level, cpi=800), reports, dt), expected)

@@ -1,4 +1,4 @@
-"""hidraw transport for the Rival 3 Wireless (§1.2, §2)."""
+"""hidraw transport for the Rival 3 Wireless (spec 1.2, spec 2)."""
 
 import contextlib
 import fcntl
@@ -10,9 +10,9 @@ import time
 
 from . import protocol as p
 
-COMMAND_GAP_S = 0.030  # §2.3
+COMMAND_GAP_S = 0.030  # spec 2.3
 # Shared by every mousework process (app, CLI, service): responses carry no
-# opcode echo (§2.1), so two processes querying at once could read each
+# opcode echo (spec 2.1), so two processes querying at once could read each
 # other's answers. Each query holds this lock from request to response.
 LOCK_PATH = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "mousework.lock")
 QUERY_TIMEOUT_S = 1.0
@@ -61,7 +61,7 @@ def _top_level_usage(descriptor):
 def find_nodes():
     """Map usage -> /dev/hidrawN for the 1038:1830 receiver.
 
-    Interfaces are picked by HID usage, not interface number (§1.2).
+    Interfaces are picked by HID usage, not interface number (spec 1.2).
     """
     wanted = f"HID_ID=0003:{p.VENDOR_ID:08X}:{p.PRODUCT_ID:08X}"
     nodes = {}
@@ -78,12 +78,12 @@ def find_nodes():
     return nodes
 
 
-BLUETOOTH_VENDOR_ID = 0x0111  # §1.1: the same mouse over Bluetooth
+BLUETOOTH_VENDOR_ID = 0x0111  # spec 1.1: the same mouse over Bluetooth
 BUS_BLUETOOTH = 0x0005
 
 
 def bluetooth_present():
-    """True if the mouse is connected over Bluetooth (no settings channel, §7.5)."""
+    """True if the mouse is connected over Bluetooth (no settings channel, spec 7.5)."""
     wanted = f"HID_ID={BUS_BLUETOOTH:04X}:{BLUETOOTH_VENDOR_ID:08X}:{p.PRODUCT_ID:08X}"
     for uevent in glob.glob("/sys/bus/hid/devices/*/uevent"):
         try:
@@ -196,7 +196,7 @@ class Mouse:
     def wireless_reset(self):
         self.send(p.command(p.RECEIVER | p.OP_WIRELESS_RESET))
 
-    # --- mouse (require a link, §1.4) ---
+    # --- mouse (require a link, spec 1.4) ---
 
     def _mouse_query(self, payload):
         if not self.linked():
@@ -227,7 +227,7 @@ class Mouse:
     def set_polling_hz(self, hz, settle=True):
         self._mouse_send(p.encode_polling(hz))
         if settle:
-            time.sleep(3.0)  # §2.3
+            time.sleep(3.0)  # spec 2.3
 
     def power(self):
         return p.decode_power(self._mouse_query(p.command(p.READ | p.OP_POWER)))
@@ -271,7 +271,7 @@ class Mouse:
         self._mouse_send(p.encode_direct_color(rgb))
 
     def restart_lighting(self):
-        time.sleep(1.0)  # §2.3
+        time.sleep(1.0)  # spec 2.3
         self._mouse_send(p.command(p.OP_RESTART_LIGHTING))
 
     def save_to_flash(self):
@@ -279,7 +279,7 @@ class Mouse:
 
 
 class EventListener:
-    """Reads unsolicited notifications from the event interface (§2.4)."""
+    """Reads unsolicited notifications from the event interface (spec 2.4)."""
 
     def __init__(self, callback, path=None):
         self.path = path or find_nodes().get(p.EVENT_USAGE)

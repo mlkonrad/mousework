@@ -13,7 +13,7 @@ Mousework was written from a behavioral specification of how SteelSeries GG
 talks to this mouse, produced in a separate reverse-engineering pass for
 interoperability. The people writing Mousework's code never saw GG's files,
 decompiled code or reverse-engineering notes. Section references such as
-`§3.1` in the code point into that specification, which is not part of this
+`spec 3.1` in the code point into that specification, which is not part of this
 repository.
 
 ## Features

@@ -67,7 +67,7 @@ class ReconcileTests(unittest.TestCase):
         self.assertIn("cpi", mouse.writes)
         self.assertEqual(mouse._table.active_cpi, 1600)
         self.assertTrue(mouse._power.high_efficiency)
-        self.assertEqual(mouse._power.idle_lighting_s, 300)  # preserved (§3.3)
+        self.assertEqual(mouse._power.idle_lighting_s, 300)  # preserved (spec 3.3)
 
     def test_smart_illumination_difference(self):
         pr = luzinhas()

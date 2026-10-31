@@ -1,9 +1,9 @@
-"""Host-side acceleration, deceleration and smoothing (§3.7).
+"""Host-side acceleration, deceleration and smoothing (spec 3.7).
 
 Pure arithmetic with no I/O, fed one mouse report at a time. Two styles:
 
 STYLE_GG follows the spec bit for bit: deceleration is a single step
-(§3.7.1), and both scaling and smoothing round small movements away.
+(spec 3.7.1), and both scaling and smoothing round small movements away.
 
 STYLE_SMOOTH is our own: deceleration fades out over the ten bands, which is
 what the table's shape implies; scaling carries its remainder instead of
@@ -15,8 +15,8 @@ most reports are 1-2 counts, where GG's rounding stalls slow movement.
 from dataclasses import dataclass
 
 DEFAULT_CPI = 1600
-RESET_INTERVAL = 1000  # 100 ms in 100 µs units
-SMOOTHING_SPEED_LIMIT = 3 * 800  # thousandths of in/s (§3.7.2)
+RESET_INTERVAL = 1000  # 100 ms in 100 us units
+SMOOTHING_SPEED_LIMIT = 3 * 800  # thousandths of in/s (spec 3.7.2)
 
 STYLE_SMOOTH = "smooth"
 STYLE_GG = "gg"
@@ -24,7 +24,7 @@ STYLES = (STYLE_SMOOTH, STYLE_GG)
 
 ACCEL_THRESHOLDS = tuple(1200 * k for k in range(1, 11))
 
-# §3.7.1 deceleration thresholds TD_0..TD_9 per level, thousandths of in/s
+# spec 3.7.1 deceleration thresholds TD_0..TD_9 per level, thousandths of in/s
 DECEL_THRESHOLDS = {
     1: (0, 61, 126, 196, 270, 351, 441, 542, 663, 820),
     2: (0, 123, 253, 392, 540, 702, 882, 1085, 1326, 1641),
@@ -40,7 +40,7 @@ DECEL_THRESHOLDS = {
 
 
 def isqrt(n):
-    """The driver's Newton iteration, including its rounding quirks (§3.7.0)."""
+    """The driver's Newton iteration, including its rounding quirks (spec 3.7.0)."""
     if n == 0:
         return 0
     x, history = 15, [15]
@@ -49,7 +49,7 @@ def isqrt(n):
         if nxt == x:
             return nxt
         if len(history) >= 2 and nxt == history[-2]:
-            return nxt  # oscillation; matches the §3.7.0 examples
+            return nxt  # oscillation; matches the spec 3.7.0 examples
         history.append(nxt)
         x = nxt
 
@@ -76,8 +76,8 @@ def accel_percent(level, v):
 
 
 def decel_percent(level, v, style=STYLE_SMOOTH):
-    """Smooth: fades from 5 × level % at rest to 0 at 1.2 × level in/s.
-    GG: the full 5 × level % up to the last threshold, then 0."""
+    """Smooth: fades from 5 x level % at rest to 0 at 1.2 x level in/s.
+    GG: the full 5 x level % up to the last threshold, then 0."""
     if not level:
         return 0
     if style == STYLE_GG:
@@ -147,7 +147,7 @@ class MotionFilter:
         return bool(self.accel or self.decel or self.smoothing)
 
     def interval(self, timestamp):
-        """Report interval in 100 µs units from a timestamp in seconds."""
+        """Report interval in 100 us units from a timestamp in seconds."""
         if self._last_time is None:
             dt = RESET_INTERVAL
         else:
@@ -160,7 +160,7 @@ class MotionFilter:
         return r, (1000000 // self.cpi) * r // dt
 
     def process(self, dx, dy, dt):
-        """Filter one report. dt is the report interval in 100 µs units."""
+        """Filter one report. dt is the report interval in 100 us units."""
         dt = max(1, dt)
         r, v = self.speed(dx, dy, dt)
         jitter = r == 10 and dt == 1

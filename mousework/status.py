@@ -19,7 +19,7 @@ CONNECTION_NO_RECEIVER = "no-receiver"
 CONNECTION_NO_ACCESS = "no-access"
 CONNECTION_NO_RESPONSE = "no-response"
 
-BATTERY_STATES = {0: "discharging", 1: "charging", 2: "charged"}  # §5
+BATTERY_STATES = {0: "discharging", 1: "charging", 2: "charged"}  # spec 5
 
 
 def _profile(store_factory):
@@ -104,7 +104,7 @@ def _read(mouse, status, bluetooth_present):
                            "smart_illumination": power.smart_illumination,
                            "sleep_minutes": power.idle_sleep_s // 60}
         # High efficiency mode fixes the rate at 125 Hz and its readback isn't
-        # meaningful (§3.2).
+        # meaningful (spec 3.2).
         status["polling_hz"] = 125 if power.high_efficiency else mouse.polling_hz()
     except device.MouseUnreachable:
         # The mouse went to sleep between queries.

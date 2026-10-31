@@ -1,4 +1,4 @@
-"""Named configurations stored on the host and applied to the mouse (§7.4)."""
+"""Named configurations stored on the host and applied to the mouse (spec 7.4)."""
 
 import json
 import os
@@ -15,7 +15,7 @@ DEFAULT_NAME = "Default"
 
 @dataclass
 class Profile:
-    """Factory defaults follow §8.3."""
+    """Factory defaults follow spec 8.3."""
     cpi_presets: list = field(default_factory=lambda: [400, 800, 1200, 1600, 2000])
     active_cpi: int = 400
     polling_hz: int = 1000
@@ -26,7 +26,7 @@ class Profile:
     buttons: dict = field(default_factory=lambda: {
         name: p.format_action(b) for name, b in {**p.DEFAULT_BUTTONS, **p.DEFAULT_WHEEL}.items()
     })
-    # Host-side motion filter (§3.7), applied by mousework-filter
+    # Host-side motion filter (spec 3.7), applied by mousework-filter
     accel_level: int = 0
     decel_level: int = 0
     smoothing_level: int = 0
@@ -157,7 +157,7 @@ def set_polling_if_needed(mouse, hz):
 
     Each polling-rate write makes the mouse reconfigure, which briefly
     stalls the pointer. Leaving high efficiency mode may already restore the
-    rate (§3.3). The 1.5 s wait avoids stale reads (§2.3).
+    rate (spec 3.3). The 1.5 s wait avoids stale reads (spec 2.3).
     """
     time.sleep(1.5)
     try:
@@ -181,7 +181,7 @@ def set_power_if_needed(mouse, profile, current=None):
     mouse.set_power(p.PowerSettings(
         high_efficiency=profile.high_efficiency,
         movement_saving=p.SMART_ILLUMINATION_ON if profile.smart_illumination else 0,
-        idle_lighting_s=current.idle_lighting_s,  # GG preserves this field (§3.3)
+        idle_lighting_s=current.idle_lighting_s,  # GG preserves this field (spec 3.3)
         idle_sleep_s=profile.sleep_minutes * 60,
     ))
 
@@ -197,7 +197,7 @@ def set_cpi_if_needed(mouse, profile):
 
 
 def apply(profile, mouse, progress=lambda message: None, save=True):
-    """Write every on-mouse setting of a profile, then save to flash (§4)."""
+    """Write every on-mouse setting of a profile, then save to flash (spec 4)."""
     profile.validate()
     buttons, wheel = profile.bindings()
     current = mouse.power()
@@ -220,7 +220,7 @@ def apply(profile, mouse, progress=lambda message: None, save=True):
     if save:
         progress("Saving to mouse")
         mouse.save_to_flash()
-    time.sleep(1.0)  # §2.3 settle after a full configuration
+    time.sleep(1.0)  # spec 2.3 settle after a full configuration
     progress("Done")
 
 
@@ -269,7 +269,7 @@ def reconcile(profile, mouse):
 
 
 def resend_volatile(profile, mouse):
-    """On-connect re-send of lighting and bindings (§7.2)."""
+    """On-connect re-send of lighting and bindings (spec 7.2)."""
     buttons, wheel = profile.bindings()
     if "lighting" in profile.managed:
         mouse.set_lighting(profile.lighting)

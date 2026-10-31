@@ -15,6 +15,7 @@ BuildArch:      noarch
 
 BuildRequires:  python3-devel
 BuildRequires:  desktop-file-utils
+BuildRequires:  libappstream-glib
 BuildRequires:  systemd-rpm-macros
 # For the tests in %%check.
 BuildRequires:  python3-gobject-base
@@ -64,6 +65,7 @@ is also in its App settings.
 %pyproject_save_files -L mousework
 
 desktop-file-install --dir=%{buildroot}%{_datadir}/applications data/%{app_id}.desktop
+install -Dpm0644 data/%{app_id}.metainfo.xml %{buildroot}%{_metainfodir}/%{app_id}.metainfo.xml
 for icon in data/icons/hicolor/*/apps/%{app_id}.*; do
     install -Dpm0644 "$icon" "%{buildroot}%{_datadir}/icons/${icon#data/icons/}"
 done
@@ -85,6 +87,7 @@ install -Dpm0644 gnome-shell-extension/schemas/org.gnome.shell.extensions.mousew
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/%{app_id}.desktop
+appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/%{app_id}.metainfo.xml
 %{py3_test_envvars} %{python3} -m unittest discover -s tests -t .
 
 %post
@@ -108,6 +111,7 @@ udevadm trigger --subsystem-match=hidraw --subsystem-match=input --subsystem-mat
 %{_bindir}/mousework-gtk
 %{_bindir}/mousework-filter
 %{_datadir}/applications/%{app_id}.desktop
+%{_metainfodir}/%{app_id}.metainfo.xml
 %{_datadir}/icons/hicolor/*/apps/%{app_id}.*
 %{_udevrulesdir}/70-mousework.rules
 %{_userunitdir}/mousework-filter.service

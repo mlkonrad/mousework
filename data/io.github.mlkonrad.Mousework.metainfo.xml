@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata: what software centers such as GNOME Software show. -->
+<component type="desktop-application">
+  <id>io.github.mlkonrad.Mousework</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Mousework</name>
+  <summary>Settings for the SteelSeries Rival 3 Wireless mouse</summary>
+  <developer id="io.github.mlkonrad">
+    <name>Marlon Konrad</name>
+  </developer>
+
+  <description>
+    <p>
+      Mousework sets up the SteelSeries Rival 3 Wireless on Linux: everything
+      the mouse stores itself, plus pointer tuning and battery warnings that
+      run on your computer.
+    </p>
+    <ul>
+      <li>CPI presets and polling rate</li>
+      <li>Wheel lighting: steady, colour shift, breathe and reactive</li>
+      <li>Remap the buttons and wheel to clicks, keyboard shortcuts and media keys</li>
+      <li>Named profiles, switched from the app, the command line or the GNOME top bar</li>
+      <li>Acceleration, deceleration and smoothing</li>
+      <li>Battery level and low-battery notifications</li>
+    </ul>
+    <p>
+      It also includes the mousework command for scripts and a top-bar
+      indicator for GNOME Shell.
+    </p>
+    <p>
+      Mousework is an independent project. It is not made, endorsed or
+      supported by SteelSeries.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.mlkonrad.Mousework.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Connection, battery and CPI presets</caption>
+      <image>https://raw.githubusercontent.com/mlkonrad/mousework/master/data/screenshots/main.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Button remapping and pointer motion</caption>
+      <image>https://raw.githubusercontent.com/mlkonrad/mousework/master/data/screenshots/buttons.png</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/mlkonrad/mousework</url>
+  <url type="bugtracker">https://github.com/mlkonrad/mousework/issues</url>
+  <url type="vcs-browser">https://github.com/mlkonrad/mousework</url>
+
+  <categories>
+    <category>Settings</category>
+    <category>HardwareSettings</category>
+  </categories>
+  <keywords>
+    <keyword>mouse</keyword>
+    <keyword>SteelSeries</keyword>
+    <keyword>Rival</keyword>
+    <keyword>DPI</keyword>
+    <keyword>CPI</keyword>
+  </keywords>
+
+  <provides>
+    <binary>mousework</binary>
+    <binary>mousework-gtk</binary>
+    <!-- The USB receiver, so software centers can suggest Mousework when it is plugged in. -->
+    <modalias>usb:v1038p1830d*</modalias>
+  </provides>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.2" date="2026-10-31">
+      <description>
+        <p>On GNOME, Mousework offers to turn on its top-bar indicator the
+        first time it starts, and has a switch for it in its settings.</p>
+      </description>
+    </release>
+    <release version="0.1.1" date="2026-10-31">
+      <description>
+        <p>First release with a Fedora package.</p>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-10-24">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -1,4 +1,8 @@
-# Mousework
+<p align="center">
+  <img src="data/icons/hicolor/scalable/apps/io.github.mlkonrad.Mousework.svg" width="128" height="128" alt="Mousework icon">
+</p>
+
+<h1 align="center">Mousework</h1>
 
 Settings for the **SteelSeries Rival 3 Wireless** (USB `1038:1830`) on Linux:
 a GTK 4 / libadwaita app, a command-line tool and a small background service.
@@ -7,6 +11,11 @@ The **Rival 3 Wireless Gen 2** (USB `1038:1872`) is supported too, but that
 support is **untested**: it was written from the specification alone, without
 the mouse at hand. If you have one, please report how it works, together with
 the output of `mousework status`. See [Rival 3 Wireless Gen 2](#rival-3-wireless-gen-2).
+
+<p align="center">
+  <img src="data/screenshots/main.png" width="400" alt="Mousework: device, battery and CPI presets">
+  <img src="data/screenshots/buttons.png" width="400" alt="Mousework: button remapping and motion settings">
+</p>
 
 Mousework is an independent project. It is not made, endorsed or supported by
 SteelSeries. SteelSeries, Rival and SteelSeries GG are trademarks of their
@@ -215,6 +224,11 @@ Shell, KDE Plasma, Xfce, Polybar and i3blocks; a JSON Schema is in
 [docs/status.schema.json](docs/status.schema.json).
 
 ### Top-bar indicator for GNOME Shell
+
+<p align="center">
+  <img src="data/screenshots/indicator.png" width="400" alt="The Mousework indicator menu in the GNOME top bar">
+  <img src="data/screenshots/indicator-settings.png" width="400" alt="The indicator's settings: icon and what appears next to it">
+</p>
 
 `gnome-shell-extension/` is a small GNOME Shell extension (Shell 49 and 50)
 built on `mousework status --json`. While the mouse is connected through its

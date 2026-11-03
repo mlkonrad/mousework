@@ -2,7 +2,7 @@
 %global app_id io.github.mlkonrad.Mousework
 
 Name:           mousework
-Version:        0.1.6
+Version:        0.1.7
 Release:        1%{?dist}
 Summary:        Settings for SteelSeries Rival 3 Wireless mice
 
@@ -124,6 +124,9 @@ udevadm trigger --subsystem-match=hidraw --subsystem-match=input --subsystem-mat
 %{_datadir}/glib-2.0/schemas/org.gnome.shell.extensions.mousework.gschema.xml
 
 %changelog
+* Tue Nov 03 2026 Marlon Konrad <marlonk@gmail.com> - 0.1.7-1
+- Support GNOME Shell 51 in the top-bar indicator extension
+
 * Sat Oct 31 2026 Marlon Konrad <marlonk@gmail.com> - 0.1.6-1
 - Add mousework probe: read-only identification of SteelSeries mice that
   Mousework doesn't support yet, for reporting them

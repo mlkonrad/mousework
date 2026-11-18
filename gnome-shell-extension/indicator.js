@@ -34,8 +34,8 @@ const STATE_TEXT = {
 
 export const MouseworkIndicator = GObject.registerClass(
 class MouseworkIndicator extends PanelMenu.Button {
-    _init(extension) {
-        super._init(0.5, extension.metadata.name);
+    constructor(extension) {
+        super(0.5, extension.metadata.name);
         this._extension = extension;
         this._settings = extension.getSettings();
         this._status = null;
@@ -53,10 +53,10 @@ class MouseworkIndicator extends PanelMenu.Button {
         this.visible = false;
 
         this._settings.connectObject('changed', () => this._render(), this);
-        this.menu.connect('open-state-changed', (_menu, open) => {
+        this.menu.connectObject('open-state-changed', (_menu, open) => {
             if (open)
                 this._refresh();
-        });
+        }, this);
 
         this._changedId = Gio.DBus.session.signal_subscribe(null, CHANGES_INTERFACE, 'Changed', CHANGES_PATH,
             null, Gio.DBusSignalFlags.NONE, () => this._scheduleRefresh());
@@ -326,6 +326,7 @@ class MouseworkIndicator extends PanelMenu.Button {
         }
         Gio.DBus.session.signal_unsubscribe(this._changedId);
         this._cancellable.cancel();
+        this.menu.disconnectObject(this);
         this._settings.disconnectObject(this);
         this._settings = null;
         this._extension = null;

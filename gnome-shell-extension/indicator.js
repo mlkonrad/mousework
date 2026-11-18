@@ -3,9 +3,9 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GioUnix from 'gi://GioUnix';
 import GObject from 'gi://GObject';
-import Graphene from 'gi://Graphene';
 import St from 'gi://St';
 
+import * as Animation from 'resource:///org/gnome/shell/ui/animation.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -21,8 +21,7 @@ const CHANGES_PATH = '/io/github/mlkonrad/Mousework';
 const APP_ID = 'io.github.mlkonrad.Mousework.desktop';
 const INSTALL_URL = 'https://github.com/mlkonrad/mousework#install';
 const MOUSE_ICON = 'input-mouse-symbolic';
-const SYNC_ICON = 'view-refresh-symbolic';
-const SPIN_MS = 1200;
+const SPINNER_SIZE = 16;
 // While syncing, check often: the sync ends a few seconds later.
 const SYNC_REFRESH_MS = 2000;
 const DIM_OPACITY = 180;
@@ -43,9 +42,12 @@ class MouseworkIndicator extends PanelMenu.Button {
         this._cancellable = new Gio.Cancellable();
 
         const box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
-        this._icon = new St.Icon({style_class: 'system-status-icon', pivot_point: new Graphene.Point({x: 0.5, y: 0.5})});
+        this._icon = new St.Icon({style_class: 'system-status-icon'});
+        // Shown instead of the icon while settings are written to the mouse.
+        this._spinner = new Animation.Spinner(SPINNER_SIZE, {hideOnStop: true});
         this._label = new St.Label({y_align: Clutter.ActorAlign.CENTER});
         box.add_child(this._icon);
+        box.add_child(this._spinner);
         box.add_child(this._label);
         this.add_child(box);
 
@@ -167,7 +169,7 @@ class MouseworkIndicator extends PanelMenu.Button {
         const syncing = this._syncing();
         this.visible = status !== null && (connected || status.connection === 'asleep' || syncing !== null);
         if (!this.visible) {
-            this._spin(false);
+            this._spinner.stop();
             this.menu.close();
             return;
         }
@@ -187,7 +189,7 @@ class MouseworkIndicator extends PanelMenu.Button {
     // the user to the installation guide instead of staying hidden.
     _renderNotInstalled() {
         this.visible = true;
-        this._spin(false);
+        this._spinner.stop();
         this._icon.icon_name = MOUSE_ICON;
         this._icon.visible = true;
         this._icon.opacity = DIM_OPACITY;
@@ -206,22 +208,6 @@ class MouseworkIndicator extends PanelMenu.Button {
         return this._switchingTo ? {profile: this._switchingTo} : null;
     }
 
-    _spin(on) {
-        if (on === this._spinning)
-            return;
-        this._spinning = on;
-        this._icon.remove_transition('rotation-angle-z');
-        this._icon.rotation_angle_z = 0;
-        if (on) {
-            this._icon.ease({
-                rotation_angle_z: 360,
-                duration: SPIN_MS,
-                mode: Clutter.AnimationMode.LINEAR,
-                repeatCount: -1,
-            });
-        }
-    }
-
     _renderPanel(status, connected, syncing) {
         const iconMode = this._settings.get_string('panel-icon');
         const parts = [];
@@ -238,14 +224,15 @@ class MouseworkIndicator extends PanelMenu.Button {
             parts.push('Asleep');
         }
 
-        if (syncing)
-            this._icon.icon_name = SYNC_ICON;
-        else if (iconMode === 'battery' && connected && status.battery)
+        if (iconMode === 'battery' && connected && status.battery)
             this._icon.icon_name = batteryIconName(status.battery);
         else
             this._icon.icon_name = MOUSE_ICON;
-        this._spin(syncing !== null);
-        this._icon.visible = iconMode !== 'none' || parts.length === 0 || syncing !== null;
+        if (syncing)
+            this._spinner.play();
+        else
+            this._spinner.stop();
+        this._icon.visible = !syncing && (iconMode !== 'none' || parts.length === 0);
         this._icon.opacity = connected || syncing ? 255 : DIM_OPACITY;
         this._label.text = parts.join('  ');
         this._label.visible = parts.length > 0;

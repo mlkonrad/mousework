@@ -36,6 +36,7 @@ class MouseworkIndicator extends PanelMenu.Button {
     constructor(extension) {
         super(0.5, extension.metadata.name);
         this._extension = extension;
+        this._appIcon = Gio.icon_new_for_string(`${extension.path}/icons/mousework-symbolic.svg`);
         this._settings = extension.getSettings();
         this._status = null;
         this._installed = true;
@@ -220,11 +221,11 @@ class MouseworkIndicator extends PanelMenu.Button {
                 parts.push(`${status.polling_hz} Hz`);
             if (this._settings.get_boolean('show-profile') && status.profile)
                 parts.push(status.profile.active);
-        } else if (iconMode === 'none' && !syncing) {
-            parts.push('Asleep');
         }
 
-        if (iconMode === 'battery' && connected && status.battery)
+        if (iconMode === 'mousework')
+            this._icon.gicon = this._appIcon;
+        else if (iconMode === 'battery' && connected && status.battery)
             this._icon.icon_name = batteryIconName(status.battery);
         else
             this._icon.icon_name = MOUSE_ICON;
@@ -232,7 +233,7 @@ class MouseworkIndicator extends PanelMenu.Button {
             this._spinner.play();
         else
             this._spinner.stop();
-        this._icon.visible = !syncing && (iconMode !== 'none' || parts.length === 0);
+        this._icon.visible = !syncing;
         this._icon.opacity = connected || syncing ? 255 : DIM_OPACITY;
         this._label.text = parts.join('  ');
         this._label.visible = parts.length > 0;

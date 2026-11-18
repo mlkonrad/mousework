@@ -7,7 +7,7 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 const ICONS = [
     ['battery', 'Battery level'],
     ['mouse', 'Mouse'],
-    ['none', 'None'],
+    ['mousework', 'Mousework'],
 ];
 
 const TEXTS = [

@@ -85,6 +85,8 @@ install -d %{buildroot}%{_datadir}/gnome-shell/extensions/%{ext_uuid}
 install -pm0644 gnome-shell-extension/*.js gnome-shell-extension/metadata.json \
     gnome-shell-extension/stylesheet.css \
     %{buildroot}%{_datadir}/gnome-shell/extensions/%{ext_uuid}/
+install -Dpm0644 gnome-shell-extension/icons/mousework-symbolic.svg \
+    %{buildroot}%{_datadir}/gnome-shell/extensions/%{ext_uuid}/icons/mousework-symbolic.svg
 install -Dpm0644 gnome-shell-extension/schemas/org.gnome.shell.extensions.mousework.gschema.xml \
     %{buildroot}%{_datadir}/glib-2.0/schemas/org.gnome.shell.extensions.mousework.gschema.xml
 

@@ -343,9 +343,9 @@ uses it.
 
 | | |
 |---|---|
-| Bus name | `io.github.mlkonrad.Mousework` |
-| Object path | `/io/github/mlkonrad/Mousework` |
-| Interface | `io.github.mlkonrad.Mousework` |
+| Bus name | `io.github.mlkonrad.Mousework.Service` |
+| Object path | `/io/github/mlkonrad/Mousework/Service` |
+| Interface | `io.github.mlkonrad.Mousework.Service` |
 
 | Method | Does |
 |---|---|
@@ -353,15 +353,19 @@ uses it.
 | `UseProfile (s name) -> ()` | Same as `mousework profile use NAME`: writes the profile to the mouse, saves it there and makes it active. Takes a few seconds; use a timeout of a minute. |
 
 Failures are D-Bus errors whose message explains what went wrong:
-`io.github.mlkonrad.Mousework.Error.NoSuchProfile` for an unknown name, and
-`io.github.mlkonrad.Mousework.Error.Failed` when the mouse couldn't be reached
+`io.github.mlkonrad.Mousework.Service.Error.NoSuchProfile` for an unknown name, and
+`io.github.mlkonrad.Mousework.Service.Error.Failed` when the mouse couldn't be reached
 or written to. The bus starts the service on the first call if it isn't
 running yet. If the call fails with `org.freedesktop.DBus.Error.ServiceUnknown`,
 Mousework isn't installed, or is older than 0.1.8.
 
+This is a different name from the app's own (`io.github.mlkonrad.Mousework`),
+which the app uses to keep to one window. Changes are still announced by the
+`Changed` signal described above.
+
 ```sh
-gdbus call --session -d io.github.mlkonrad.Mousework -o /io/github/mlkonrad/Mousework \
-    -m io.github.mlkonrad.Mousework.GetStatus
+gdbus call --session -d io.github.mlkonrad.Mousework.Service -o /io/github/mlkonrad/Mousework/Service \
+    -m io.github.mlkonrad.Mousework.Service.GetStatus
 ```
 
 ## Compatibility

@@ -1,9 +1,10 @@
 """Session-bus API of mousework-filter (docs/json.md, "D-Bus API").
 
-The service owns io.github.mlkonrad.Mousework and exports, on the object that
-already sends the Changed signal, a method to read the status and one to
-switch profiles. Desktop widgets such as the GNOME Shell extension use it
-instead of running the `mousework` command.
+The service owns io.github.mlkonrad.Mousework.Service and exports a method to
+read the status and one to switch profiles. Desktop widgets such as the GNOME
+Shell extension use it instead of running the `mousework` command. It can't
+use the app ID itself: the GTK app owns that name to keep to one window.
+Changes are still announced by the Changed signal (changes.py).
 
 Calls run on their own threads: reading the mouse or writing a profile takes
 from a fraction of a second to several seconds, and the bus must keep
@@ -13,25 +14,24 @@ answering meanwhile.
 import json
 import threading
 
-from . import changes, device, status
+from . import device, status
 from .profiles import Store, switch
 
-BUS_NAME = changes.INTERFACE
-ERROR_FAILED = f"{changes.INTERFACE}.Error.Failed"
-ERROR_NO_SUCH_PROFILE = f"{changes.INTERFACE}.Error.NoSuchProfile"
+BUS_NAME = "io.github.mlkonrad.Mousework.Service"
+PATH = "/io/github/mlkonrad/Mousework/Service"
+INTERFACE = BUS_NAME
+ERROR_FAILED = f"{INTERFACE}.Error.Failed"
+ERROR_NO_SUCH_PROFILE = f"{INTERFACE}.Error.NoSuchProfile"
 
 INTROSPECTION = f"""
 <node>
-  <interface name="{changes.INTERFACE}">
+  <interface name="{INTERFACE}">
     <method name="GetStatus">
       <arg name="status" type="s" direction="out"/>
     </method>
     <method name="UseProfile">
       <arg name="name" type="s" direction="in"/>
     </method>
-    <signal name="{changes.SIGNAL}">
-      <arg name="what" type="s"/>
-    </signal>
   </interface>
 </node>
 """
@@ -59,11 +59,11 @@ class Api:
         interface = Gio.DBusNodeInfo.new_for_xml(INTROSPECTION).interfaces[0]
 
         def bus_acquired(connection, _name):
-            connection.register_object(changes.PATH, interface, self._method_call, None, None)
+            connection.register_object(PATH, interface, self._method_call, None, None)
 
         def name_lost(_connection, _name):
             self._log(f"D-Bus name {BUS_NAME} is taken or the session bus is gone; "
-                      "widgets fall back to polling")
+                      "widgets can't read the status over D-Bus")
 
         Gio.bus_own_name(Gio.BusType.SESSION, BUS_NAME, Gio.BusNameOwnerFlags.NONE,
                          bus_acquired, None, name_lost)

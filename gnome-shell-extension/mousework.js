@@ -5,9 +5,9 @@ Gio._promisify(Gio.DBusConnection.prototype, 'call');
 
 // The D-Bus API of the mousework-filter service (docs/json.md in the
 // Mousework repo). The bus starts the service on the first call if needed.
-const BUS_NAME = 'io.github.mlkonrad.Mousework';
-const OBJECT_PATH = '/io/github/mlkonrad/Mousework';
-const INTERFACE = 'io.github.mlkonrad.Mousework';
+const BUS_NAME = 'io.github.mlkonrad.Mousework.Service';
+const OBJECT_PATH = '/io/github/mlkonrad/Mousework/Service';
+const INTERFACE = 'io.github.mlkonrad.Mousework.Service';
 
 const STATUS_TIMEOUT_MS = 10000;
 // Writing a profile makes the mouse reconnect, which can take a while.

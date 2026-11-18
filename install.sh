@@ -167,7 +167,7 @@ command -v gtk-update-icon-cache >/dev/null &&
 sed "s|^ExecStart=.*|ExecStart=$BIN/mousework-filter|" data/mousework-filter.service \
     > "$CONFIG_HOME/systemd/user/mousework-filter.service"
 mkdir -p "$DATA_HOME/dbus-1/services"
-sed "s|^Exec=.*|Exec=$BIN/mousework-filter|" data/$APP_ID.service > "$DATA_HOME/dbus-1/services/$APP_ID.service"
+sed "s|^Exec=.*|Exec=$BIN/mousework-filter|" data/$APP_ID.Service.service > "$DATA_HOME/dbus-1/services/$APP_ID.Service.service"
 
 if ! cmp -s data/70-mousework.rules "$RULE"; then
     say "Installing the udev rule (needs sudo)"

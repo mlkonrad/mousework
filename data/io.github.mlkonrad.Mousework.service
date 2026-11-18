@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=io.github.mlkonrad.Mousework
+Exec=/usr/bin/mousework-filter
+SystemdService=mousework-filter.service

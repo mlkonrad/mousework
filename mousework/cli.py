@@ -7,8 +7,8 @@ import time
 
 from . import device, sync
 from . import protocol as p
-from .profiles import (Store, apply, apply_changes, import_from_device, polling_target,
-                       set_polling_if_needed, set_power_if_needed)
+from .profiles import (Store, import_from_device, polling_target,
+                       set_polling_if_needed, set_power_if_needed, switch)
 
 
 def _rgb(text):
@@ -206,18 +206,7 @@ def cmd_motion(args):
 
 
 def _switch_to(store, name, temporary=False):
-    """Write the profile to the mouse first, then record it as active, so a
-    failed write (mouse asleep) leaves the store unchanged."""
-    target = store.profiles[name]
-    with sync.syncing(name), device.Mouse() as m:
-        if temporary:
-            apply_changes(target, store.current, m)
-        else:
-            apply(target, m)
-    store.active = name
-    if not temporary:
-        store.mark_saved()
-    store.save()
+    switch(store, name, temporary)
     print(f"profile {name}" + (" (temporary)" if temporary else ""))
 
 

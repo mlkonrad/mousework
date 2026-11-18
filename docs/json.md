@@ -24,9 +24,10 @@ Contents:
 6. [Exit status](#exit-status)
 7. [How often to call it](#how-often-to-call-it)
 8. [Change notifications](#change-notifications)
-9. [Compatibility](#compatibility)
-10. [Writing your own integration](#writing-your-own-integration)
-11. [Examples](#examples): shell, Python, Waybar (Omarchy, Hyprland, Sway), GNOME Shell,
+9. [D-Bus API](#d-bus-api)
+10. [Compatibility](#compatibility)
+11. [Writing your own integration](#writing-your-own-integration)
+12. [Examples](#examples): shell, Python, Waybar (Omarchy, Hyprland, Sway), GNOME Shell,
     KDE Plasma, Xfce, Polybar, i3blocks and others
 
 ## Quick start
@@ -315,8 +316,9 @@ Wait about a second after the last signal before you read the status. A
 setting is saved before it is written to the mouse, and changes often come in
 bursts, so this reads the new values once instead of several times.
 
-The signal comes from the `mousework-filter` service. It is a broadcast, so
-the sender has no well-known bus name; match on interface, member and path.
+Most signals come from the `mousework-filter` service, but the app and the
+command line send `syncing` themselves, so match on interface, member and
+path, not on the sender.
 If the service isn't running, no signals arrive, so keep polling as well, at
 the slower end of the range above.
 
@@ -330,6 +332,36 @@ In GJS:
 const id = Gio.DBus.session.signal_subscribe(null, 'io.github.mlkonrad.Mousework', 'Changed',
     '/io/github/mlkonrad/Mousework', null, Gio.DBusSignalFlags.NONE, () => scheduleRefresh());
 // later: Gio.DBus.session.signal_unsubscribe(id);
+```
+
+## D-Bus API
+
+Since Mousework 0.1.8 the `mousework-filter` service also answers on the
+session bus, so a program can read the status and switch profiles without
+running the `mousework` command. The GNOME Shell extension in this repository
+uses it.
+
+| | |
+|---|---|
+| Bus name | `io.github.mlkonrad.Mousework` |
+| Object path | `/io/github/mlkonrad/Mousework` |
+| Interface | `io.github.mlkonrad.Mousework` |
+
+| Method | Does |
+|---|---|
+| `GetStatus () -> (s status)` | Returns the same JSON object as `mousework status --json`, as a string. |
+| `UseProfile (s name) -> ()` | Same as `mousework profile use NAME`: writes the profile to the mouse, saves it there and makes it active. Takes a few seconds; use a timeout of a minute. |
+
+Failures are D-Bus errors whose message explains what went wrong:
+`io.github.mlkonrad.Mousework.Error.NoSuchProfile` for an unknown name, and
+`io.github.mlkonrad.Mousework.Error.Failed` when the mouse couldn't be reached
+or written to. The bus starts the service on the first call if it isn't
+running yet. If the call fails with `org.freedesktop.DBus.Error.ServiceUnknown`,
+Mousework isn't installed, or is older than 0.1.8.
+
+```sh
+gdbus call --session -d io.github.mlkonrad.Mousework -o /io/github/mlkonrad/Mousework \
+    -m io.github.mlkonrad.Mousework.GetStatus
 ```
 
 ## Compatibility

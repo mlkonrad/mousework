@@ -74,6 +74,7 @@ done
 
 install -Dpm0644 data/70-mousework.rules %{buildroot}%{_udevrulesdir}/70-mousework.rules
 install -Dpm0644 data/mousework-filter.service %{buildroot}%{_userunitdir}/mousework-filter.service
+install -Dpm0644 data/%{app_id}.service %{buildroot}%{_datadir}/dbus-1/services/%{app_id}.service
 install -d %{buildroot}%{_userpresetdir}
 echo 'enable mousework-filter.service' > %{buildroot}%{_userpresetdir}/80-mousework.preset
 
@@ -117,6 +118,7 @@ udevadm trigger --subsystem-match=hidraw --subsystem-match=input --subsystem-mat
 %{_datadir}/icons/hicolor/*/apps/%{app_id}.*
 %{_udevrulesdir}/70-mousework.rules
 %{_userunitdir}/mousework-filter.service
+%{_datadir}/dbus-1/services/%{app_id}.service
 %{_userpresetdir}/80-mousework.preset
 
 %files gnome-shell-extension

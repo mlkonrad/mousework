@@ -16,7 +16,7 @@ import time
 import evdev
 from evdev import ecodes as e
 
-from . import battery, changes, device, models
+from . import battery, changes, dbus_api, device, models
 from . import protocol as p
 from .motion import MotionFilter
 from .profiles import CONFIG_FILE, Store
@@ -171,6 +171,7 @@ class Service:
             time.sleep(RETRY_S)
 
     def run(self):
+        dbus_api.Api(log=log).start()
         threading.Thread(target=self._watch_device, daemon=True).start()
         while self.running:
             self.refresh_settings()

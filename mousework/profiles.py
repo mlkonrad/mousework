@@ -306,3 +306,22 @@ def resend_volatile(profile, mouse):
     if "buttons" in profile.managed:
         mouse.set_buttons(buttons)
         mouse.set_wheel(wheel)
+
+
+def switch(store, name, temporary=False):
+    """Make the named profile the active one.
+
+    Writes the profile to the mouse first, then records it as active, so a
+    failed write (mouse asleep) leaves the store unchanged.
+    """
+    from . import device, sync
+    target = store.profiles[name]
+    with sync.syncing(name), device.Mouse() as m:
+        if temporary:
+            apply_changes(target, store.current, m)
+        else:
+            apply(target, m)
+    store.active = name
+    if not temporary:
+        store.mark_saved()
+    store.save()

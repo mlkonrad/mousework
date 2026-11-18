@@ -84,6 +84,17 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.8" date="2026-11-18">
+      <description>
+        <p>The background service now answers on the session bus, so the
+        top-bar indicator and other widgets can read the mouse's status and
+        switch profiles without running the mousework command. When
+        Mousework is missing, the indicator links to the installation
+        guide. While settings are syncing, it shows GNOME's spinner instead
+        of an icon that spun far too fast. Its top-bar icon can now be a
+        Mousework icon instead of none.</p>
+      </description>
+    </release>
     <release version="0.1.7" date="2026-11-03">
       <description>
         <p>The top-bar indicator now works on GNOME 51.</p>

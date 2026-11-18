@@ -2,7 +2,7 @@
 %global app_id io.github.mlkonrad.Mousework
 
 Name:           mousework
-Version:        0.1.7
+Version:        0.1.8
 Release:        1%{?dist}
 Summary:        Settings for SteelSeries Rival 3 Wireless mice
 
@@ -128,6 +128,14 @@ udevadm trigger --subsystem-match=hidraw --subsystem-match=input --subsystem-mat
 %{_datadir}/glib-2.0/schemas/org.gnome.shell.extensions.mousework.gschema.xml
 
 %changelog
+* Wed Nov 18 2026 Marlon Konrad <marlonk@gmail.com> - 0.1.8-1
+- mousework-filter answers GetStatus and UseProfile on the session bus
+- The top-bar indicator uses that D-Bus API instead of running mousework,
+  and links to the installation guide when Mousework is missing
+- The indicator shows GNOME's spinner while syncing; the old spinning icon
+  turned far too fast
+- New top-bar icon choice: a symbolic Mousework icon, instead of no icon
+
 * Tue Nov 03 2026 Marlon Konrad <marlonk@gmail.com> - 0.1.7-1
 - Support GNOME Shell 51 in the top-bar indicator extension
 

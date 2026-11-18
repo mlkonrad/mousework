@@ -1,7 +1,3 @@
-// Generated with AI for personal use.
-// Do NOT upload to extensions.gnome.org (EGO) unless you understand JavaScript
-// and can maintain this code.
-
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
@@ -11,6 +7,8 @@ Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 // ~/.local/bin, so look there by name.
 const USER_MOUSEWORK = GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'mousework']);
 
+const SYSTEM_MOUSEWORK = '/usr/bin/mousework';
+
 const TIMEOUT_S = 10;
 
 /**
@@ -18,12 +16,32 @@ const TIMEOUT_S = 10;
  * without restarting GNOME Shell. A user install wins over a distro package
  * (in /usr/bin), as its systemd unit does.
  *
- * @returns {string} the path to run
+ * @returns {string|null} the path to run, or null if Mousework isn't installed
  */
 function mouseworkPath() {
     if (GLib.file_test(USER_MOUSEWORK, GLib.FileTest.IS_EXECUTABLE))
         return USER_MOUSEWORK;
-    return GLib.find_program_in_path('mousework') ?? '/usr/bin/mousework';
+    if (GLib.file_test(SYSTEM_MOUSEWORK, GLib.FileTest.IS_EXECUTABLE))
+        return SYSTEM_MOUSEWORK;
+    return GLib.find_program_in_path('mousework');
+}
+
+/**
+ * @returns {boolean} whether the Mousework CLI can be found
+ */
+export function isInstalled() {
+    return mouseworkPath() !== null;
+}
+
+/**
+ * @returns {string} the path to run
+ * @throws {Error} if Mousework isn't installed
+ */
+function requireMousework() {
+    const path = mouseworkPath();
+    if (!path)
+        throw new Error('Mousework is not installed');
+    return path;
 }
 
 /**
@@ -33,7 +51,7 @@ function mouseworkPath() {
  * @returns {Promise<object|null>} the status object, or null if it couldn't be read
  */
 export async function readStatus(cancellable) {
-    const proc = Gio.Subprocess.new([mouseworkPath(), 'status', '--json'],
+    const proc = Gio.Subprocess.new([requireMousework(), 'status', '--json'],
         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
     let timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, TIMEOUT_S, () => {
         timeoutId = 0;
@@ -68,7 +86,7 @@ export async function readStatus(cancellable) {
  * @throws {Error} with Mousework's explanation if the switch failed
  */
 export async function switchProfile(name, cancellable) {
-    const proc = Gio.Subprocess.new([mouseworkPath(), 'profile', 'use', name],
+    const proc = Gio.Subprocess.new([requireMousework(), 'profile', 'use', name],
         Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_PIPE);
     const [, stderr] = await proc.communicate_utf8_async(null, cancellable);
     if (!proc.get_successful())

@@ -1,7 +1,3 @@
-// Generated with AI for personal use.
-// Do NOT upload to extensions.gnome.org (EGO) unless you understand JavaScript
-// and can maintain this code.
-
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -14,7 +10,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import {readStatus, switchProfile, batteryIconName} from './mousework.js';
+import {isInstalled, readStatus, switchProfile, batteryIconName} from './mousework.js';
 
 // A fallback: mousework-filter announces changes on D-Bus (docs/json.md).
 const REFRESH_INTERVAL_S = 120;
@@ -23,6 +19,7 @@ const CHANGE_DELAY_MS = 1000;
 const CHANGES_INTERFACE = 'io.github.mlkonrad.Mousework';
 const CHANGES_PATH = '/io/github/mlkonrad/Mousework';
 const APP_ID = 'io.github.mlkonrad.Mousework.desktop';
+const INSTALL_URL = 'https://github.com/mlkonrad/mousework#install';
 const MOUSE_ICON = 'input-mouse-symbolic';
 const SYNC_ICON = 'view-refresh-symbolic';
 const SPIN_MS = 1200;
@@ -42,6 +39,7 @@ class MouseworkIndicator extends PanelMenu.Button {
         this._extension = extension;
         this._settings = extension.getSettings();
         this._status = null;
+        this._installed = true;
         this._cancellable = new Gio.Cancellable();
 
         const box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
@@ -91,8 +89,11 @@ class MouseworkIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._details);
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addAction('Mousework Settings', () => {
+        this._appItem = this.menu.addAction('Mousework Settings', () => {
             GioUnix.DesktopAppInfo.new(APP_ID)?.launch([], global.create_app_launch_context(0, -1));
+        });
+        this._installItem = this.menu.addAction('Installation Guide', () => {
+            Gio.AppInfo.launch_default_for_uri(INSTALL_URL, global.create_app_launch_context(0, -1));
         });
         this.menu.addAction('Indicator Settings', () => this._extension.openPreferences());
     }
@@ -128,6 +129,12 @@ class MouseworkIndicator extends PanelMenu.Button {
             this._refreshAgain = true;
             return;
         }
+        this._installed = isInstalled();
+        if (!this._installed) {
+            this._status = null;
+            this._render();
+            return;
+        }
         this._refreshing = true;
         const cancellable = this._cancellable;
         let status;
@@ -151,6 +158,12 @@ class MouseworkIndicator extends PanelMenu.Button {
     }
 
     _render() {
+        if (!this._installed) {
+            this._renderNotInstalled();
+            return;
+        }
+        this._appItem.visible = true;
+        this._installItem.visible = false;
         const status = this._status;
         const connected = status?.connection === 'receiver';
         const syncing = this._syncing();
@@ -170,6 +183,22 @@ class MouseworkIndicator extends PanelMenu.Button {
         this._details.actor.visible = connected;
         if (connected)
             this._renderDetails(status);
+    }
+
+    // Without the Mousework app the extension has nothing to show, so it points
+    // the user to the installation guide instead of staying hidden.
+    _renderNotInstalled() {
+        this.visible = true;
+        this._spin(false);
+        this._icon.icon_name = MOUSE_ICON;
+        this._icon.visible = true;
+        this._icon.opacity = DIM_OPACITY;
+        this._label.visible = false;
+        this._title.label.text = 'Mousework is not installed';
+        this._stateItem.label.text = 'This indicator needs the Mousework app.';
+        this._details.actor.visible = false;
+        this._appItem.visible = false;
+        this._installItem.visible = true;
     }
 
     _syncing() {

@@ -1,7 +1,7 @@
 {
     "uuid": "mousework@mlkonrad.github.com",
     "name": "Mousework Indicator",
-    "description": "Shows the battery level, DPI, polling rate and profile of a SteelSeries Rival 3 Wireless in the top bar while it is connected through its USB receiver.\n\nNeeds Mousework (https://github.com/mlkonrad/mousework).",
+    "description": "Shows the status of a SteelSeries Rival 3 Wireless in the top bar while it is connected through its USB receiver.\n\nFeatures:\n- Battery level, with an icon that shows the charge and whether it is charging\n- Active DPI and which preset is in use\n- Polling rate, and whether high-efficiency mode is on\n- Switch between your Mousework profiles from the menu\n- Shows when the mouse is asleep and while settings are syncing to it\n- Choose the top-bar icon and which values appear next to it\n- Opens the Mousework app from the menu\n\nNeeds Mousework (https://github.com/mlkonrad/mousework), which talks to the mouse. If it isn't installed, the indicator says so and links to the installation guide.",
     "shell-version": ["49", "50", "51"],
     "settings-schema": "org.gnome.shell.extensions.mousework",
     "url": "https://github.com/mlkonrad/mousework",

@@ -10,7 +10,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import {isInstalled, readStatus, switchProfile, batteryIconName} from './mousework.js';
+import {NotInstalledError, readStatus, switchProfile, batteryIconName} from './mousework.js';
 
 // A fallback: mousework-filter announces changes on D-Bus (docs/json.md).
 const REFRESH_INTERVAL_S = 120;
@@ -129,24 +129,22 @@ class MouseworkIndicator extends PanelMenu.Button {
             this._refreshAgain = true;
             return;
         }
-        this._installed = isInstalled();
-        if (!this._installed) {
-            this._status = null;
-            this._render();
-            return;
-        }
         this._refreshing = true;
         const cancellable = this._cancellable;
-        let status;
+        let status = null;
+        let installed = true;
         try {
             status = await readStatus(cancellable);
-        } catch {
-            return;
+        } catch (e) {
+            if (!(e instanceof NotInstalledError))
+                return;
+            installed = false;
         } finally {
             this._refreshing = false;
         }
         if (cancellable.is_cancelled())
             return;
+        this._installed = installed;
         this._status = status;
         this._render();
         if (status?.syncing)
@@ -195,7 +193,7 @@ class MouseworkIndicator extends PanelMenu.Button {
         this._icon.opacity = DIM_OPACITY;
         this._label.visible = false;
         this._title.label.text = 'Mousework is not installed';
-        this._stateItem.label.text = 'This indicator needs the Mousework app.';
+        this._stateItem.label.text = 'This indicator needs Mousework 0.1.8 or newer.';
         this._details.actor.visible = false;
         this._appItem.visible = false;
         this._installItem.visible = true;

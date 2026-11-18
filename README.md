@@ -151,8 +151,24 @@ To remove it: `sudo dnf remove mousework`. Your profiles in
 `~/.config/mousework` stay. To keep the app but drop the indicator:
 `sudo dnf remove mousework-gnome-shell-extension`.
 
-If you used `install.sh` before, run `./uninstall.sh` first: a copy in
-`~/.local` takes precedence over the package.
+After an update, log out and back in once: GNOME Shell loads a new version of
+the indicator only at login.
+
+GNOME Shell always prefers a copy of the indicator in
+`~/.local/share/gnome-shell/extensions` over the one from the package, and
+skips the package's copy without a warning. So:
+
+- If you used `install.sh` before, run `./uninstall.sh` first, or the old copy
+  it left in `~/.local` keeps running instead of the updated one.
+- If you install the indicator from
+  [extensions.gnome.org](https://extensions.gnome.org/), that copy also lives
+  in `~/.local` and is updated there, which is fine: it works with any
+  Mousework 0.1.8 or newer. You then don't need
+  `mousework-gnome-shell-extension`; remove it with
+  `sudo dnf remove mousework-gnome-shell-extension` to avoid having two copies.
+
+To check which copy is running:
+`gnome-extensions info mousework@mlkonrad.github.com` shows its path.
 
 ### Other distributions
 
